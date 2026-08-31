@@ -8,8 +8,10 @@ class FlowStore:
         self._flows: OrderedDict[str, Flow] = OrderedDict()
 
     def add(self, flow: Flow) -> None:
+        # Insertion order = request order. Updating an existing flow (e.g. a
+        # pending row becoming complete) keeps its position rather than jumping
+        # to the end, so rows don't reorder when responses land out of order.
         self._flows[flow.id] = flow
-        self._flows.move_to_end(flow.id)
         while len(self._flows) > self.capacity:
             self._flows.popitem(last=False)
 

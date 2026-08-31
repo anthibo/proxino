@@ -48,6 +48,11 @@ class Proxino:
             lambda f: f.exception() and _log.error("proxino publish failed: %r", f.exception())
         )
 
+    def request(self, flow: HTTPFlow) -> None:
+        # Stream a pending row the moment a request starts, so in-flight and
+        # failed requests appear immediately (not only on response).
+        self._emit("flow.new", flow)
+
     def response(self, flow: HTTPFlow) -> None:
         self._emit("flow.complete", flow)
 

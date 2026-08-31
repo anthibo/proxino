@@ -25,3 +25,13 @@ def test_client_counts_and_clear():
     assert s.client_counts() == {"1.1.1.1": 2, "2.2.2.2": 1}
     s.clear()
     assert len(s) == 0 and s.client_counts() == {}
+
+def test_update_preserves_request_order():
+    from proxino.store import FlowStore
+    from tests.test_models import make_flow
+    s = FlowStore()
+    s.add(make_flow(id="a"))
+    s.add(make_flow(id="b"))
+    s.add(make_flow(id="a"))            # 'a' completes/updates after 'b'
+    ids = [m["id"] for m in s.list_meta()]   # newest request first
+    assert ids == ["b", "a"]            # 'a' kept its original position, not moved to front

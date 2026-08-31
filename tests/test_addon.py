@@ -49,6 +49,26 @@ async def test_retains_mflow_and_replays():
         assert calls and calls[0][0] == "replay.client"
         assert addon.replay("nope") is False
 
+async def test_request_hook_streams_pending_then_completes_in_place():
+    addon = Proxino()
+    published = []
+    async def fake_publish(evt): published.append(evt)
+    addon.broadcaster.publish = fake_publish
+    from mitmproxy.test import tutils
+    with taddons.context(addon):
+        f = tflow.tflow()                    # request only, no response yet
+        f.client_conn.peername = ("10.0.0.9", 5000)
+        addon.request(f)                     # pending row streamed on request start
+        await addon._flush_for_test()
+        assert published[-1]["type"] == "flow.new"
+        assert published[-1]["flow"]["state"] == "pending"
+        assert len(addon.store) == 1
+        f.response = tutils.tresp(status_code=200)
+        addon.response(f)                    # same id completes
+        await addon._flush_for_test()
+        assert published[-1]["type"] == "flow.complete"
+        assert len(addon.store) == 1          # updated in place, not duplicated
+
 async def test_replay_edited_applies_edits_to_a_clone():
     addon = Proxino()
     async def noop(evt): pass
