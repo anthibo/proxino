@@ -1,0 +1,22 @@
+# SDD scratch workspace
+.superpowers/
+.worktrees/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Node / frontend
+node_modules/
+web/dist/
+web/node_modules/
+playwright-report/
+test-results/
+.playwright/
+
+# Superpowers planning docs — kept local, not for the public repo
+docs/superpowers/
