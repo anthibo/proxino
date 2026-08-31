@@ -4,9 +4,17 @@ import { useStore } from "../store";
 import { ExportMenu } from "./ExportMenu";
 import { Settings } from "./Settings";
 
+const VIEWS: { key: "inspector" | "devices" | "dashboard"; label: string }[] = [
+  { key: "inspector", label: "Inspector" },
+  { key: "devices", label: "Devices" },
+  { key: "dashboard", label: "Dashboard" },
+];
+
 export function TopBar({ onConnect }: { onConnect: () => void }) {
   const clear = useStore((s) => s.clear);
   const upsert = useStore((s) => s.upsertFlow);
+  const view = useStore((s) => s.view);
+  const setView = useStore((s) => s.setView);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [proxy, setProxy] = useState<string | null>(null);
@@ -60,6 +68,13 @@ export function TopBar({ onConnect }: { onConnect: () => void }) {
           <span className={"tb-dot " + (caOk ? "ok" : "off")} />
           {caOk == null ? "CA…" : caOk ? "CA trusted" : "CA not installed"}
         </span>
+      </div>
+      <div className="view-switch" role="tablist">
+        {VIEWS.map((v) => (
+          <button key={v.key} role="tab" aria-selected={view === v.key}
+                  className={"vs-item" + (view === v.key ? " active" : "")}
+                  onClick={() => setView(v.key)}>{v.label}</button>
+        ))}
       </div>
       <span className="topbar-spacer" />
       <button onClick={onConnect}>Connect device</button>

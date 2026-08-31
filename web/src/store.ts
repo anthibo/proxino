@@ -2,6 +2,8 @@ import { create } from "zustand";
 import type { FlowMeta, FlowDetail } from "./types";
 import { parseQuery } from "./filters/dsl";
 
+export type View = "inspector" | "devices" | "dashboard";
+
 interface State {
   flows: Map<string, FlowMeta>;
   order: string[];
@@ -9,6 +11,8 @@ interface State {
   detail: FlowDetail | null;
   query: string;
   clientIp: string | null;
+  view: View;
+  setView: (v: View) => void;
   upsertFlow: (f: FlowMeta) => void;
   setQuery: (q: string) => void;
   selectClient: (ip: string | null) => void;
@@ -20,7 +24,8 @@ interface State {
 
 export const useStore = create<State>((set, get) => ({
   flows: new Map(), order: [], selectedId: null, detail: null,
-  query: "", clientIp: null,
+  query: "", clientIp: null, view: "inspector",
+  setView: (view) => set({ view }),
   upsertFlow: (f) => set((s) => {
     const flows = new Map(s.flows);
     const isNew = !flows.has(f.id);

@@ -881,3 +881,86 @@ html, body, #root {
 .sb-sep { color: var(--muted); }
 .sb-spacer { flex: 1; }
 .sb-item.mono, .statusbar .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+
+/* ==================== Views: switcher, empty state, devices, dashboard ==================== */
+
+/* Top-bar view switcher */
+.view-switch { display: inline-flex; gap: 2px; background: var(--chip); border: 1px solid var(--border);
+  border-radius: 8px; padding: 2px; margin-left: 6px; }
+.vs-item { margin: 0; padding: 5px 14px; background: transparent; border: none; border-radius: 6px;
+  color: var(--sec); font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.vs-item:hover { color: var(--text); background: transparent; }
+.vs-item.active { background: var(--brand); color: #0e1016; }
+
+/* Empty / first-run */
+.emptystate { flex: 1; display: flex; align-items: flex-start; justify-content: center; overflow: auto; background: var(--base); }
+.es-center { display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 96px; max-width: 720px; }
+.es-icon { width: 80px; height: 80px; border-radius: 20px; background: var(--brandbg); border: 1px solid #2a2b47;
+  display: flex; align-items: flex-end; justify-content: center; gap: 5px; padding-bottom: 26px; margin-bottom: 22px; }
+.es-bar { width: 6px; border-radius: 3px; background: var(--brand); }
+.es-bar.b1 { height: 12px; } .es-bar.b2 { height: 20px; } .es-bar.b3 { height: 30px; }
+.es-title { font-size: 24px; font-weight: 600; color: var(--text); }
+.es-sub { font-size: 14px; color: var(--sec); line-height: 1.6; margin-top: 10px; }
+.es-cta { margin-top: 22px; padding: 10px 20px; font-size: 14px; }
+.es-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 44px; width: 100%; }
+.es-step { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: left; }
+.es-badge { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px;
+  border-radius: 8px; background: var(--brandbg); color: var(--brandtx); font-weight: 700; font-size: 13px; }
+.es-step-title { font-size: 14px; font-weight: 600; color: var(--text); margin-top: 12px; }
+.es-step-desc { font-size: 12.5px; color: var(--sec); margin-top: 6px; line-height: 1.5; }
+
+/* Devices view */
+.devices-view { flex: 1; overflow: auto; padding: 20px 32px; background: var(--base); }
+.dv-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.dv-head h2 { font-size: 22px; font-weight: 600; color: var(--text); }
+.dv-badge { font-size: 12.5px; color: var(--sec); background: var(--chip); border: 1px solid var(--border); border-radius: 12px; padding: 3px 10px; }
+.dv-list { display: flex; flex-direction: column; gap: 12px; }
+.dv-card { display: grid; grid-template-columns: 48px 220px 1fr; align-items: center; gap: 16px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+.dv-ico { width: 44px; height: 44px; border-radius: 11px; background: var(--chip); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center; color: var(--brandtx); }
+.dv-name { display: flex; align-items: center; gap: 7px; font-size: 16px; font-weight: 600; color: var(--text); }
+.dv-ip { font-size: 12.5px; color: var(--muted); font-family: "JetBrains Mono", ui-monospace, monospace; margin-top: 3px; }
+.dv-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.dv-stat { display: flex; flex-direction: column; gap: 4px; }
+.dv-k { font-size: 10px; font-weight: 700; letter-spacing: .05em; color: var(--muted); }
+.dv-v { font-size: 17px; font-weight: 500; color: var(--text); }
+.dv-v.mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+
+/* Dashboard view */
+.dash-view { flex: 1; overflow: auto; padding: 20px 32px; background: var(--base); }
+.dash-head h2 { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
+.dash-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 16px; }
+.dash-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+.dash-k { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; color: var(--muted); }
+.dash-v { font-size: 24px; font-weight: 600; color: var(--text); margin-top: 8px; font-family: "JetBrains Mono", ui-monospace, monospace; }
+.dash-sub { font-size: 11.5px; color: var(--sec); margin-top: 6px; }
+.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.dash-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+.dash-wide { grid-column: 1 / -1; }
+.dash-panel-h { font-size: 13px; font-weight: 600; color: var(--sec); margin-bottom: 14px; }
+.dash-empty { color: var(--muted); font-size: 12.5px; }
+.dash-bar { display: flex; height: 16px; border-radius: 6px; overflow: hidden; background: var(--field); gap: 2px; }
+.dash-seg { height: 100%; }
+.dash-legend { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+.dash-leg-row { display: grid; grid-template-columns: 16px 42px 1fr auto; align-items: center; gap: 10px; }
+.dash-dot { width: 10px; height: 10px; border-radius: 50%; }
+.dash-leg-code { font-size: 13px; color: var(--text); font-weight: 600; }
+.dash-leg-desc { font-size: 12.5px; color: var(--sec); }
+.dash-leg-n { font-size: 13px; color: var(--text); font-weight: 500; }
+.dash-host { display: grid; grid-template-columns: 200px 1fr 44px; align-items: center; gap: 12px; padding: 5px 0; }
+.dash-host-name { font-size: 12.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-host-bar { height: 10px; background: var(--field); border-radius: 4px; overflow: hidden; }
+.dash-host-bar span { display: block; height: 100%; background: var(--brand); border-radius: 4px; }
+.dash-host-n { font-size: 12px; color: var(--sec); text-align: right; }
+.dash-slow { display: grid; grid-template-columns: 52px 1fr 72px; align-items: center; gap: 12px; padding: 6px 0; }
+.dash-m { font-size: 11px; font-weight: 700; }
+.dash-path { font-size: 12.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-ms { font-size: 12.5px; color: var(--sec); text-align: right; }
+
+/* View switcher must beat the generic `.topbar button` rule (specificity) */
+.topbar .view-switch .vs-item { background: transparent; border: none; padding: 5px 14px;
+  color: var(--sec); font-weight: 600; border-radius: 6px; }
+.topbar .view-switch .vs-item:hover { background: transparent; color: var(--text); border: none; }
+.topbar .view-switch .vs-item.active { background: var(--brand); color: #0e1016; }
+.topbar .view-switch .vs-item.active:hover { background: #8e80f8; color: #0e1016; }
