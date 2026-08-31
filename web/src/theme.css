@@ -964,3 +964,6 @@ html, body, #root {
 .topbar .view-switch .vs-item:hover { background: transparent; color: var(--text); border: none; }
 .topbar .view-switch .vs-item.active { background: var(--brand); color: #0e1016; }
 .topbar .view-switch .vs-item.active:hover { background: #8e80f8; color: #0e1016; }
+
+/* Desktop shell (Tauri, seamless title bar): clear the macOS traffic lights */
+body.in-tauri .topbar { padding-left: 82px; }

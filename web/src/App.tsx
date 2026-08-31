@@ -20,6 +20,12 @@ export function App() {
   const view = useStore((s) => s.view);
   const isEmpty = useStore((s) => s.flows.size === 0);
   useEffect(() => {
+    // Running inside the Tauri desktop shell (seamless title bar) — leave room
+    // for the macOS traffic-light buttons in the top bar.
+    const w = window as unknown as { __TAURI_INTERNALS__?: unknown; __TAURI__?: unknown };
+    if (w.__TAURI_INTERNALS__ || w.__TAURI__) document.body.classList.add("in-tauri");
+  }, []);
+  useEffect(() => {
     const resync = () => fetchFlows().then((fs) => fs.forEach(upsert)).catch(() => {});
     resync();
     return connectWS(

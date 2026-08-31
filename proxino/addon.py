@@ -25,7 +25,7 @@ class Proxino:
         loader.add_option("proxino_web_port", int, 8081, "Proxino web UI port")
 
     async def running(self) -> None:
-        import uvicorn, webbrowser
+        import os, uvicorn, webbrowser
         from proxino.server import make_app
         port = ctx.options.proxino_web_port
         app = make_app(self.store, self.registry, self.broadcaster,
@@ -33,7 +33,10 @@ class Proxino:
                        web_port=port)
         config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
         asyncio.ensure_future(uvicorn.Server(config).serve())
-        webbrowser.open(f"http://127.0.0.1:{port}")
+        # The desktop shell hosts the UI in its own window, so it sets this
+        # to suppress the browser tab the CLI opens.
+        if not os.environ.get("PROXINO_NO_BROWSER"):
+            webbrowser.open(f"http://127.0.0.1:{port}")
 
     def _emit(self, evt_type: str, flow: HTTPFlow) -> None:
         rec = flow_to_record(flow, self.registry)
