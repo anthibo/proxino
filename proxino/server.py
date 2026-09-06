@@ -1,5 +1,4 @@
 from __future__ import annotations
-from pathlib import Path
 from typing import Callable
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
@@ -9,6 +8,7 @@ from .netinfo import lan_ips
 from .sessions import dump_session, load_session
 from .har import flows_to_har
 from .cainfo import ca_info
+from proxino.paths import web_dist
 
 class LabelBody(BaseModel):
     label: str
@@ -113,7 +113,7 @@ def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | Non
         except WebSocketDisconnect:
             broadcaster.unregister(sock)
 
-    dist = Path(__file__).resolve().parent.parent / "web" / "dist"
-    if dist.exists():
+    dist = web_dist()
+    if dist is not None:
         app.mount("/", StaticFiles(directory=dist, html=True), name="static")
     return app
