@@ -24,3 +24,13 @@ def test_user_supplied_script_and_port_are_not_duplicated():
     out = build_argv(["-s", "x.py", "-p", "1234"], {})
     assert out.count("-s") == 1 and out.count("-p") == 1
     assert out[:4] == ["-s", "x.py", "-p", "1234"]
+
+def test_equals_form_of_user_options_is_not_duplicated():
+    out = build_argv(["--listen-port=1234", "--scripts=x.py"], {})
+    assert "-p" not in out and "-s" not in out
+    assert out[:2] == ["--listen-port=1234", "--scripts=x.py"]
+
+def test_abbreviations_are_not_ours():
+    out = build_argv(["--web", "9999", "--proxy", "7777"], {})
+    assert out[:4] == ["--web", "9999", "--proxy", "7777"]
+    assert out[-1] == "proxino_web_port=8081" and "8080" in out
