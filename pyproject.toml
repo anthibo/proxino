@@ -5,14 +5,41 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "proxino"
 version = "0.1.0"
+description = "Self-hosted network inspector for mobile HTTPS — a free, open alternative to Proxyman/Charles"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Abdulrahman Khalid" }]
 requires-python = ">=3.11"
+keywords = ["mitmproxy", "proxy", "https", "ios", "android", "network", "inspector", "debugging"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Internet :: Proxy Servers",
+    "Topic :: Software Development :: Debuggers",
+]
 dependencies = ["mitmproxy>=11", "fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2.6"]
+
+[project.urls]
+Homepage = "https://github.com/anthibo/proxino"
+Source = "https://github.com/anthibo/proxino"
+Issues = "https://github.com/anthibo/proxino/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "httpx>=0.27", "pytest-asyncio>=0.23"]
+desktop = ["pyinstaller>=6.11"]
 
 [project.scripts]
 proxino = "proxino.cli:main"
+
+[tool.setuptools]
+packages = ["proxino"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+proxino = ["web_dist/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

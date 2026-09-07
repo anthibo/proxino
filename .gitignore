@@ -20,3 +20,11 @@ test-results/
 
 # Superpowers planning docs — kept local, not for the public repo
 docs/superpowers/
+
+# Built artifacts copied into the package / desktop bundle at build time
+proxino/web_dist/
+desktop/src-tauri/binaries/
+desktop/sidecar/.venv/
+desktop/sidecar/build/
+desktop/sidecar/dist/
+docs/media/*.webm
