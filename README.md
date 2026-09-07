@@ -18,9 +18,9 @@ Download from the [latest release](https://github.com/anthibo/proxino/releases/l
 
 | Platform | File | First launch |
 |---|---|---|
-| macOS 12+ (Apple Silicon) | `Proxino_<version>_aarch64.dmg` | Unsigned build: right-click **Proxino.app → Open**, or `xattr -dr com.apple.quarantine /Applications/Proxino.app` |
+| macOS 12+ (Apple Silicon; Intel is on the [roadmap](#roadmap)) | `Proxino_<version>_aarch64.dmg` | Unsigned build: right-click **Proxino.app → Open**, or `xattr -dr com.apple.quarantine /Applications/Proxino.app` |
 | Windows 10/11 (x64) | `Proxino_<version>_x64-setup.exe` | SmartScreen → **More info → Run anyway** |
-| Linux (x64) | `.AppImage` or `.deb` | AppImage: `chmod +x Proxino_*.AppImage && ./Proxino_*.AppImage` |
+| Linux (x64) | `Proxino_<version>_amd64.AppImage` or `Proxino_<version>_amd64.deb` | AppImage: `chmod +x Proxino_*.AppImage && ./Proxino_*.AppImage` |
 
 The app bundles the capture engine — no Python or Node needed. It uses port 8080 for the proxy and 8081 for the UI, falling back to free ports if those are taken (the Connect-device wizard always shows the real one).
 
@@ -46,16 +46,13 @@ cd web && npm install && npm run build && cd ..
 
 ## Why Proxino instead of Proxyman / Charles?
 
-| | Proxino | Proxyman | Charles |
-|---|---|---|---|
-| Price | Free, MIT | Paid license (free tier limited) | Paid license |
-| Source | Open | Closed | Closed |
-| Runs on | macOS · Windows · Linux · any browser | macOS · Windows · iOS | macOS · Windows · Linux |
-| UI | Web UI, also hosted in a native window | Native | Native (Java) |
-| Engine | mitmproxy | Proprietary | Proprietary |
-| Breakpoints / intercept | Not yet ([roadmap](#roadmap)) | Yes | Yes |
+The commercial inspectors are excellent tools, and if you need breakpoints, map-local, or scripting today they still do more. Proxino is for the case where you want something **free, open, and self-hosted** that treats your phone as a first-class client:
 
-Proxino is younger and smaller. If you need scripting, breakpoints, or map-local today, the paid tools still do more. If you want a free, hackable inspector that treats your phone as a first-class client, that's Proxino.
+- **Free and MIT-licensed** — no account, no license key, no trial timer.
+- **Open source** — a mitmproxy addon, a FastAPI backend, and a React UI you can read and change.
+- **Runs where you work** — native desktop app for macOS (Apple Silicon), Windows, and Linux, or the same UI in any browser via `pipx install proxino`.
+- **Phone-first** — devices are auto-named from their traffic, grouped in the sidebar, and get their own connect wizard with a scannable CA QR code.
+- **Not there yet** — no breakpoints/intercept, no map-local, no scripting. See the [roadmap](#roadmap).
 
 ---
 
