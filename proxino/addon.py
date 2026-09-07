@@ -28,9 +28,10 @@ class Proxino:
         import os, uvicorn, webbrowser
         from proxino.server import make_app
         port = ctx.options.proxino_web_port
+        proxy_port = ctx.options.listen_port or 8080
         app = make_app(self.store, self.registry, self.broadcaster,
                        replayer=self.replay, edited_replayer=self.replay_edited,
-                       web_port=port)
+                       web_port=port, proxy_port=proxy_port)
         config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
         asyncio.ensure_future(uvicorn.Server(config).serve())
         # The desktop shell hosts the UI in its own window, so it sets this
