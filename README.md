@@ -1,10 +1,61 @@
 # Proxino
 
-**A self-hosted network inspector for your phone.** Point an iOS or Android device at Proxino and watch its HTTPS traffic in a live web UI — requests, responses, timings, grouped per device — with filters, a JSON/HTML viewer, replay, and edit‑and‑resend.
+**A free, open-source network inspector for your phone.** Point an iOS or Android device at Proxino and watch its HTTPS traffic live — requests, responses, timings, grouped per device — with filters, a JSON/HTML viewer, replay, and edit-and-resend. A self-hosted alternative to Proxyman and Charles: no account, no license, runs entirely on your machine.
 
-Think of it as an open, hackable alternative to Proxyman/Charles: a [mitmproxy](https://mitmproxy.org) addon for capture, a FastAPI backend for the API + live stream, and a React/TypeScript web app for the UI.
+<p align="center"><img src="docs/media/hero.png" alt="Proxino inspector showing captured iPhone traffic with a JSON response open" width="900"></p>
 
-> ⚠️ **It's a man‑in‑the‑middle tool by design.** Use it only on devices and traffic you own or are authorized to inspect. The web UI binds to `127.0.0.1` only.
+<p align="center"><img src="docs/media/demo.gif" alt="Filtering, opening a request, viewing headers and timing, and edit-and-resend" width="900"></p>
+
+> ⚠️ **It's a man-in-the-middle tool by design.** Use it only on devices and traffic you own or are authorized to inspect. The web UI binds to `127.0.0.1` only.
+
+---
+
+## Install
+
+### Desktop app (recommended)
+
+Download from the [latest release](https://github.com/anthibo/proxino/releases/latest):
+
+| Platform | File | First launch |
+|---|---|---|
+| macOS 12+ (Apple Silicon) | `Proxino_<version>_aarch64.dmg` | Unsigned build: right-click **Proxino.app → Open**, or `xattr -dr com.apple.quarantine /Applications/Proxino.app` |
+| Windows 10/11 (x64) | `Proxino_<version>_x64-setup.exe` | SmartScreen → **More info → Run anyway** |
+| Linux (x64) | `.AppImage` or `.deb` | AppImage: `chmod +x Proxino_*.AppImage && ./Proxino_*.AppImage` |
+
+The app bundles the capture engine — no Python or Node needed. It uses port 8080 for the proxy and 8081 for the UI, falling back to free ports if those are taken (the Connect-device wizard always shows the real one).
+
+### Web UI via pip
+
+```bash
+pipx install proxino     # or: pip install proxino
+proxino                  # proxy on :8080, opens http://127.0.0.1:8081
+```
+
+`proxino --proxy-port 9090 --web-port 9091` changes the ports; any other flag is passed to `mitmdump`.
+
+### From source
+
+```bash
+git clone https://github.com/anthibo/proxino && cd proxino
+python3 -m venv .venv && .venv/bin/pip install -e .
+cd web && npm install && npm run build && cd ..
+.venv/bin/proxino
+```
+
+---
+
+## Why Proxino instead of Proxyman / Charles?
+
+| | Proxino | Proxyman | Charles |
+|---|---|---|---|
+| Price | Free, MIT | Paid license (free tier limited) | Paid license |
+| Source | Open | Closed | Closed |
+| Runs on | macOS · Windows · Linux · any browser | macOS · Windows · iOS | macOS · Windows · Linux |
+| UI | Web UI, also hosted in a native window | Native | Native (Java) |
+| Engine | mitmproxy | Proprietary | Proprietary |
+| Breakpoints / intercept | Not yet ([roadmap](#roadmap)) | Yes | Yes |
+
+Proxino is younger and smaller. If you need scripting, breakpoints, or map-local today, the paid tools still do more. If you want a free, hackable inspector that treats your phone as a first-class client, that's Proxino.
 
 ---
 
@@ -42,28 +93,6 @@ Think of it as an open, hackable alternative to Proxyman/Charles: a [mitmproxy](
 - **`web/`** — the Vite + React + TypeScript UI (Zustand store, filter DSL, JSON viewer, etc.).
 
 See [`docs/architecture.md`](docs/architecture.md) for a deeper tour.
-
----
-
-## Quick start
-
-**Prerequisites:** Python 3.11+ and Node 18+.
-
-```bash
-# 1. Backend (in a virtualenv)
-python3 -m venv .venv
-.venv/bin/pip install -e .
-
-# 2. Build the web UI (the server serves web/dist)
-cd web && npm install && npm run build && cd ..
-
-# 3. Run — starts the proxy on :8080 and the web UI on :8081
-.venv/bin/proxino
-```
-
-Then open **http://127.0.0.1:8081** and connect a device (below).
-
-> Run `proxino` with **no extra arguments** — that's how it auto‑loads the addon and picks the ports. It's a foreground process; keep it running in its own terminal.
 
 ---
 
@@ -115,10 +144,21 @@ docs/           documentation
 
 | What            | Default            | Notes                                            |
 |-----------------|--------------------|--------------------------------------------------|
-| Proxy port      | `8080`             | where devices point                              |
-| Web UI port     | `8081`             | `--set proxino_web_port=<n>` (loopback only)     |
+| Proxy port      | `8080`             | `--proxy-port <n>`                               |
+| Web UI port     | `8081`             | `--web-port <n>` (loopback only)                 |
 | Max flows       | `5000` in memory   | oldest evicted first                             |
 | CA certificate  | `~/.mitmproxy/`    | generated by mitmproxy on first run              |
+
+---
+
+## Roadmap
+
+- Breakpoints / intercept-and-edit before forwarding
+- Find-in-body search, copy-all-as-cURL
+- Signed and notarized desktop builds, Intel macOS build, Homebrew tap
+- Client-side scripting hooks
+
+Ideas and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
