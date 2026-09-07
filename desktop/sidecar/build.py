@@ -31,17 +31,43 @@ def target_triple() -> str:
     raise SystemExit("rustc -vV did not report a host triple")
 
 
+def python312_cmd() -> list[str]:
+    """Resolve a command that invokes a real Python 3.12 interpreter, for the
+    non-uv fallback. `sys.executable` is only used when it is itself 3.12 --
+    it must never silently pin whatever Python happens to run this script."""
+    if os.name == "nt":
+        if shutil.which("py"):
+            return ["py", "-3.12"]
+    else:
+        exe = shutil.which("python3.12")
+        if exe:
+            return [exe]
+    if sys.version_info[:2] == (3, 12):
+        return [sys.executable]
+    raise SystemExit("Python 3.12 is required to build the sidecar (install uv or python3.12)")
+
+
 def build_python() -> Path:
     """Return a python executable inside a 3.12 env with proxino[desktop] installed."""
     venv = SIDECAR / ".venv"
     py = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    has_uv = shutil.which("uv") is not None
     if not py.exists():
-        if shutil.which("uv"):
-            run(["uv", "venv", "--python", "3.12", str(venv)])
+        if has_uv:
+            # --seed ensures pip is installed into the venv; modern uv
+            # (>=0.6ish) does not seed pip by default, and we also use
+            # uv pip install below which does not need it -- but --seed
+            # keeps `py` itself a normal, pip-capable interpreter.
+            run(["uv", "venv", "--seed", "--python", "3.12", str(venv)])
         else:
-            run([sys.executable, "-m", "venv", str(venv)])
-    run([str(py), "-m", "pip", "install", "--upgrade", "pip", "-q"])
-    run([str(py), "-m", "pip", "install", "-q", f"{ROOT}[desktop]"])
+            run([*python312_cmd(), "-m", "venv", str(venv)])
+    if has_uv:
+        # Use uv for the installs too, so nothing here depends on pip
+        # actually being present inside the venv.
+        run(["uv", "pip", "install", "--python", str(py), "-q", f"{ROOT}[desktop]"])
+    else:
+        run([str(py), "-m", "pip", "install", "--upgrade", "pip", "-q"])
+        run([str(py), "-m", "pip", "install", "-q", f"{ROOT}[desktop]"])
     return py
 
 

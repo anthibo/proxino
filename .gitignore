@@ -27,4 +27,5 @@ desktop/src-tauri/binaries/
 desktop/sidecar/.venv/
 desktop/sidecar/build/
 desktop/sidecar/dist/
+/build/
 docs/media/*.webm
