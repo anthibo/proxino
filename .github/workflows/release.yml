@@ -5,11 +5,32 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  verify-version:
+    name: Verify tag matches version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check pyproject.toml / tauri.conf.json / Cargo.toml match the tag
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          BASE="${TAG%%-*}"
+          PYPROJECT_VERSION=$(python3 -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          TAURI_VERSION=$(python3 -c "import json;print(json.load(open('desktop/src-tauri/tauri.conf.json'))['version'])")
+          CARGO_VERSION=$(grep -m1 '^version' desktop/src-tauri/Cargo.toml | cut -d'"' -f2)
+          echo "tag=$TAG base=$BASE pyproject=$PYPROJECT_VERSION tauri=$TAURI_VERSION cargo=$CARGO_VERSION"
+          if [ "$PYPROJECT_VERSION" != "$BASE" ] || [ "$TAURI_VERSION" != "$BASE" ] || [ "$CARGO_VERSION" != "$BASE" ]; then
+            echo "::error::Version mismatch: tag base=$BASE pyproject.toml=$PYPROJECT_VERSION tauri.conf.json=$TAURI_VERSION Cargo.toml=$CARGO_VERSION"
+            exit 1
+          fi
+
   test:
     name: Tests
+    needs: verify-version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -96,7 +117,9 @@ jobs:
     needs: wheel
     runs-on: ubuntu-latest
     environment: pypi
+    if: ${{ !contains(github.ref_name, '-') }}
     permissions:
+      contents: read
       id-token: write
     steps:
       - uses: actions/download-artifact@v4
@@ -109,6 +132,8 @@ jobs:
     name: Draft GitHub Release
     needs: [desktop, wheel]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
       - uses: actions/download-artifact@v4
@@ -122,6 +147,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
           name: Proxino ${{ github.ref_name }}
           body_path: notes.md
           files: artifacts/*

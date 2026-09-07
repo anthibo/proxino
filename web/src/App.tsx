@@ -20,10 +20,12 @@ export function App() {
   const view = useStore((s) => s.view);
   const isEmpty = useStore((s) => s.flows.size === 0);
   useEffect(() => {
-    // Running inside the Tauri desktop shell (seamless title bar) — leave room
-    // for the macOS traffic-light buttons in the top bar.
+    // Running inside the Tauri desktop shell on macOS (seamless title bar) —
+    // leave room for the macOS traffic-light buttons in the top bar. Other
+    // platforms' Tauri windows use a normal title bar, so skip the padding.
     const w = window as unknown as { __TAURI_INTERNALS__?: unknown; __TAURI__?: unknown };
-    if (w.__TAURI_INTERNALS__ || w.__TAURI__) document.body.classList.add("in-tauri");
+    const isMac = /Mac|iPhone|iPad/.test(navigator.platform) || /Macintosh/.test(navigator.userAgent);
+    if ((w.__TAURI_INTERNALS__ || w.__TAURI__) && isMac) document.body.classList.add("in-tauri");
   }, []);
   useEffect(() => {
     const resync = () => fetchFlows().then((fs) => fs.forEach(upsert)).catch(() => {});

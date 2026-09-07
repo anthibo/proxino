@@ -2,9 +2,9 @@
 
 **A free, open-source network inspector for your phone.** Point an iOS or Android device at Proxino and watch its HTTPS traffic live — requests, responses, timings, grouped per device — with filters, a JSON/HTML viewer, replay, and edit-and-resend. A self-hosted alternative to Proxyman and Charles: no account, no license, runs entirely on your machine.
 
-<p align="center"><img src="docs/media/hero.png" alt="Proxino inspector showing captured iPhone traffic with a JSON response open" width="900"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/anthibo/proxino/main/docs/media/hero.png" alt="Proxino inspector showing captured iPhone traffic with a JSON response open" width="900"></p>
 
-<p align="center"><img src="docs/media/demo.gif" alt="Filtering, opening a request, viewing headers and timing, and edit-and-resend" width="900"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/anthibo/proxino/main/docs/media/demo.gif" alt="Filtering, opening a request, viewing headers and timing, and edit-and-resend" width="900"></p>
 
 > ⚠️ **It's a man-in-the-middle tool by design.** Use it only on devices and traffic you own or are authorized to inspect. The web UI binds to `127.0.0.1` only.
 
@@ -24,14 +24,9 @@ Download from the [latest release](https://github.com/anthibo/proxino/releases/l
 
 The app bundles the capture engine — no Python or Node needed. It uses port 8080 for the proxy and 8081 for the UI, falling back to free ports if those are taken (the Connect-device wizard always shows the real one).
 
-### Web UI via pip
+### Web UI via pip (coming soon)
 
-```bash
-pipx install proxino     # or: pip install proxino
-proxino                  # proxy on :8080, opens http://127.0.0.1:8081
-```
-
-`proxino --proxy-port 9090 --web-port 9091` changes the ports; any other flag is passed to `mitmdump`.
+The PyPI package isn't published yet — it will be `pipx install proxino` once v0.1.0 lands there. Until then, use the desktop app above or run from source below.
 
 ### From source
 
@@ -42,6 +37,8 @@ cd web && npm install && npm run build && cd ..
 .venv/bin/proxino
 ```
 
+`proxino --proxy-port 9090 --web-port 9091` changes the ports; any other flag is passed to `mitmdump`.
+
 ---
 
 ## Why Proxino instead of Proxyman / Charles?
@@ -50,7 +47,7 @@ The commercial inspectors are excellent tools, and if you need breakpoints, map-
 
 - **Free and MIT-licensed** — no account, no license key, no trial timer.
 - **Open source** — a mitmproxy addon, a FastAPI backend, and a React UI you can read and change.
-- **Runs where you work** — native desktop app for macOS (Apple Silicon), Windows, and Linux, or the same UI in any browser via `pipx install proxino`.
+- **Runs where you work** — native desktop app for macOS (Apple Silicon), Windows, and Linux, or the same UI in any browser when run from source (PyPI package coming soon).
 - **Phone-first** — devices are auto-named from their traffic, grouped in the sidebar, and get their own connect wizard with a scannable CA QR code.
 - **Not there yet** — no breakpoints/intercept, no map-local, no scripting. See the [roadmap](#roadmap).
 
@@ -89,7 +86,7 @@ The commercial inspectors are excellent tools, and if you need breakpoints, map-
 - **`proxino/`** — the mitmproxy addon (`addon.py`), flow model + store, client/device registry, the FastAPI server (`server.py`), and helpers (HAR, sessions, CA info, transform).
 - **`web/`** — the Vite + React + TypeScript UI (Zustand store, filter DSL, JSON viewer, etc.).
 
-See [`docs/architecture.md`](docs/architecture.md) for a deeper tour.
+See [`docs/architecture.md`](https://github.com/anthibo/proxino/blob/main/docs/architecture.md) for a deeper tour.
 
 ---
 
@@ -155,10 +152,10 @@ docs/           documentation
 - Signed and notarized desktop builds, Intel macOS build, Homebrew tap
 - Client-side scripting hooks
 
-Ideas and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+Ideas and PRs welcome — see [CONTRIBUTING.md](https://github.com/anthibo/proxino/blob/main/CONTRIBUTING.md).
 
 ---
 
 ## License
 
-[MIT](LICENSE) © Abdulrahman Khalid
+[MIT](https://github.com/anthibo/proxino/blob/main/LICENSE) © Abdulrahman Khalid

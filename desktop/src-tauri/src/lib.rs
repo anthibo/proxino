@@ -99,7 +99,13 @@ pub fn run() {
             // The proxy listens on all interfaces (phones connect to it); the
             // web UI is loopback only.
             let proxy_port = free_port("0.0.0.0", 8080);
-            let web_port = free_port("127.0.0.1", 8081);
+            let mut web_port = free_port("127.0.0.1", 8081);
+            for _ in 0..5 {
+                if web_port != proxy_port {
+                    break;
+                }
+                web_port = free_port("127.0.0.1", 0);
+            }
 
             // Spawn without `?` here: a failure (e.g. a missing/corrupt
             // sidecar binary) must not propagate out of `setup()` — that

@@ -22,8 +22,9 @@ Installers land in `desktop/src-tauri/target/release/bundle/`.
 
 `npm run tauri dev` uses the same sidecar; rebuild it after backend changes.
 
-Cold start of the one-file sidecar is about 9 s on Apple Silicon
-(measured in Task 5).
+Cold start of the one-file sidecar is roughly 9–18 s on Apple Silicon depending
+on disk cache (one-file extraction plus mitmproxy import); the splash screen
+covers it.
 
 ## Releases
 
