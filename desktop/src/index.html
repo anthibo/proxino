@@ -24,7 +24,24 @@
     <div class="wrap">
       <div class="logo"><span class="bar b1"></span><span class="bar b2"></span><span class="bar b3"></span></div>
       <div class="name"><b>Proxino</b></div>
-      <div class="status"><span class="dot"></span>Starting the capture engine…</div>
+      <div class="status" id="status"><span class="dot"></span><span id="status-text">Starting the capture engine…</span></div>
     </div>
+    <script>
+      window.__proxinoStatus = function (msg, isError) {
+        var text = document.getElementById("status-text");
+        var box = document.getElementById("status");
+        text.textContent = msg;
+        if (isError) {
+          box.style.color = "#ff7b7b";
+          box.style.whiteSpace = "pre-wrap";
+          box.style.maxWidth = "640px";
+          box.style.textAlign = "center";
+          box.style.fontFamily = "ui-monospace, Menlo, monospace";
+          box.style.fontSize = "12px";
+          var dot = box.querySelector(".dot");
+          if (dot) dot.remove();
+        }
+      };
+    </script>
   </body>
 </html>
