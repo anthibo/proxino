@@ -67,7 +67,7 @@ export function DetailPane({ width }: { width?: number } = {}) {
       )}
       {tab === "body" && (
         <div className="body-tab">
-          {detail.request.body && (
+          {(detail.request.body || (detail.request.body == null && detail.request.size > 0)) && (
             <>
               <div className="body-tab-req">
                 <JsonView
@@ -76,6 +76,7 @@ export function DetailPane({ width }: { width?: number } = {}) {
                   contentType={requestContentType(detail.request.headers)}
                   view={detail.request.body_view}
                   pretty={detail.request.body_pretty}
+                  size={detail.request.size}
                 />
               </div>
               <div className="body-divider" />

@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from mitmproxy import contentviews as cv
 
+# Decoding runs synchronously inside mitmproxy's request/response hooks, so it
+# must stay bounded: a multi-MB body can take seconds to prettify and would
+# stall the proxy for every in-flight flow.
+MAX_DECODE = 512 * 1024
+MAX_PRETTY = 256 * 1024
+_TRUNCATION_MARKER = "\n… truncated"
+
 # (content-type prefix or exact, mitmproxy view name, short label)
 VIEW_BY_TYPE = [
     ("application/grpc", "gRPC", "grpc"),
@@ -22,6 +29,8 @@ def decode_body(raw: bytes | None, content_type: str | None, message=None) -> tu
     """
     if not raw:
         return None
+    if len(raw) > MAX_DECODE:
+        return None
     ct = (content_type or "").split(";")[0].strip().lower()
     if not ct:
         return None
@@ -35,6 +44,8 @@ def decode_body(raw: bytes | None, content_type: str | None, message=None) -> tu
                 text = result if isinstance(result, str) else str(getattr(result, "text", result))
                 if not text:
                     continue
+                if len(text) > MAX_PRETTY:
+                    text = text[:MAX_PRETTY] + _TRUNCATION_MARKER
                 return label, text
             except Exception:
                 return None

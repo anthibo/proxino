@@ -45,6 +45,13 @@ export function App() {
   }, [setDetailWidth]);
 
   useEffect(() => {
+    // Re-clamp on resize: a pane sized against a wide window can otherwise
+    // stay pinned past the 60%-of-viewport cap after the window shrinks.
+    const onResize = () => setDetailWidth(useStore.getState().detailWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [setDetailWidth]);
+  useEffect(() => {
     // Running inside the Tauri desktop shell on macOS (seamless title bar) —
     // leave room for the macOS traffic-light buttons in the top bar. Other
     // platforms' Tauri windows use a normal title bar, so skip the padding.

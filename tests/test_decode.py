@@ -1,8 +1,9 @@
 import struct
+import time
 
 from mitmproxy.test import tutils
 
-from proxino.decode import decode_body
+from proxino.decode import MAX_DECODE, MAX_PRETTY, decode_body
 
 
 def test_decode_protobuf():
@@ -65,3 +66,26 @@ def test_decode_garbage_protobuf_returns_none_no_raise():
 def test_decode_empty_body_returns_none():
     assert decode_body(b"", "application/x-protobuf") is None
     assert decode_body(None, "application/x-protobuf") is None
+
+
+def test_decode_oversized_body_returns_none_fast():
+    raw = (b"a=1&" * 150000)  # ~600 KB, well over MAX_DECODE
+    assert len(raw) > MAX_DECODE
+    t0 = time.perf_counter()
+    result = decode_body(raw, "application/x-www-form-urlencoded")
+    elapsed = time.perf_counter() - t0
+    assert result is None
+    assert elapsed < 0.05
+
+
+def test_decode_pretty_output_is_truncated_at_max_pretty():
+    # Build a urlencoded body whose decoded/prettified text exceeds MAX_PRETTY
+    # but whose raw bytes stay under MAX_DECODE.
+    raw = b"&".join(f"k{i}=v{i}".encode() for i in range(20000))
+    assert len(raw) <= MAX_DECODE
+    result = decode_body(raw, "application/x-www-form-urlencoded")
+    assert result is not None
+    label, text = result
+    assert label == "form"
+    assert len(text) <= MAX_PRETTY + len("\n… truncated")
+    assert text.endswith("\n… truncated")

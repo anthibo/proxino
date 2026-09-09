@@ -47,4 +47,17 @@ describe("DetailPane Body tab request body", () => {
     expect(screen.queryByText("REQUEST BODY")).not.toBeInTheDocument();
     expect(screen.getByText("RESPONSE BODY")).toBeInTheDocument();
   });
+
+  it("shows a binary-body note for a request with no decoded body but a nonzero size", () => {
+    const binaryDetail: FlowDetail = {
+      ...detail,
+      method: "POST",
+      request: { headers: [["content-type", "application/octet-stream"]], size: 2048, body: null },
+    };
+    useStore.getState().select("a", binaryDetail);
+    render(<DetailPane />);
+    expect(screen.getByText("REQUEST BODY")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: /^Raw$/i })[0]);
+    expect(screen.getByText("binary body, 2048 bytes")).toBeInTheDocument();
+  });
 });
