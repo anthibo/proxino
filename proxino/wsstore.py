@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from collections import deque
 import msgpack
-from proxino.decode import decode_body
+from proxino.decode import decode_body, MAX_DECODE, MAX_PRETTY
 
 MAX_TEXT = 65536
 DEFAULT_CAP = 500
@@ -25,12 +25,19 @@ def _is_valid_msgpack(content: bytes) -> bool:
 def _preview(is_text: bool, content: bytes) -> tuple[str | None, str | None, str | None]:
     """Return (text, view, pretty). Text frames try JSON; binary frames try msgpack then protobuf."""
     if is_text:
-        text = content.decode("utf-8", errors="replace")
+        text = content.decode("utf-8", errors="replace")[:MAX_TEXT]
+        if len(content) > MAX_DECODE:
+            return text, None, None
         try:
             parsed = json.loads(text)
         except ValueError:
-            return text[:MAX_TEXT], None, None
-        return text[:MAX_TEXT], "json", json.dumps(parsed, indent=2, ensure_ascii=False)
+            return text, None, None
+        pretty = json.dumps(parsed, indent=2, ensure_ascii=False)
+        if len(pretty) > MAX_PRETTY:
+            pretty = pretty[:MAX_PRETTY] + "\n… truncated"
+        return text, "json", pretty
+    if len(content) > MAX_DECODE:
+        return None, None, None
     if _is_valid_msgpack(content):
         decoded = decode_body(content, "application/msgpack")
         if decoded:

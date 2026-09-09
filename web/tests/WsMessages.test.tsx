@@ -24,6 +24,22 @@ test("search narrows rows", async () => {
   fireEvent.change(screen.getByPlaceholderText(/search frames/i), { target: { value: "pong" } });
   expect(screen.getAllByRole("row")).toHaveLength(1);
 });
+test("search matches pretty content for frames with no plain text", async () => {
+  useStore.getState().setWsMessages("w", [
+    m(0, "out", null, { view: "msgpack", pretty: '{\n  "needle": true\n}' }),
+    m(1, "in", "haystack only"),
+  ]);
+  render(<WsMessages flowId="w" />);
+  await screen.findAllByRole("row");
+  fireEvent.change(screen.getByPlaceholderText(/search frames/i), { target: { value: "needle" } });
+  expect(screen.getAllByRole("row")).toHaveLength(1);
+});
+test("shows 'No frames yet' when there are no frames, without adding a row", async () => {
+  useStore.getState().setWsMessages("w", []);
+  render(<WsMessages flowId="w" />);
+  await waitFor(() => expect(screen.getByText("No frames yet")).toBeInTheDocument());
+  expect(screen.queryAllByRole("row")).toHaveLength(0);
+});
 test("scrolling up unchecks follow; re-checking re-enables it", async () => {
   useStore.getState().setWsMessages("w", [m(0, "out", "a"), m(1, "in", "b")]);
   render(<WsMessages flowId="w" />);

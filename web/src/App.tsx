@@ -10,7 +10,7 @@ import { DevicesView } from "./components/DevicesView";
 import { DashboardView } from "./components/DashboardView";
 import { ConnectDeviceModal } from "./components/ConnectDeviceModal";
 import { connectWS } from "./ws";
-import { fetchFlows, fetchPassthrough } from "./api";
+import { fetchFlows, fetchPassthrough, fetchWsMessages } from "./api";
 import { useStore } from "./store";
 import "./theme.css";
 
@@ -19,6 +19,7 @@ export function App() {
   const upsert = useStore((s) => s.upsertFlow);
   const setPassthrough = useStore((s) => s.setPassthrough);
   const appendWsMessage = useStore((s) => s.appendWsMessage);
+  const mergeWsMessages = useStore((s) => s.mergeWsMessages);
   const view = useStore((s) => s.view);
   const isEmpty = useStore((s) => s.flows.size === 0);
   const detailWidth = useStore((s) => s.detailWidth);
@@ -64,18 +65,26 @@ export function App() {
     const resync = () => {
       fetchFlows().then((fs) => fs.forEach(upsert)).catch(() => {});
       fetchPassthrough().then(setPassthrough).catch(() => {});
+      // A reconnect can follow a dropped connection during which frames on
+      // the currently open ws flow were missed, so re-pull its buffer too.
+      const { selectedId, detail } = useStore.getState();
+      if (selectedId && detail?.kind === "ws") {
+        fetchWsMessages(selectedId).then((r) => mergeWsMessages(selectedId, r.messages)).catch(() => {});
+      }
     };
     resync();
     return connectWS(
       (e) => {
         if (e.type === "flow.update") upsert(e.flow);
         else if ("flow" in e) upsert(e.flow);
-        else if (e.type === "ws.message") appendWsMessage(e.flow_id, e.message);
+        else if (e.type === "ws.message") {
+          if (e.flow_id === useStore.getState().selectedId) appendWsMessage(e.flow_id, e.message);
+        }
         else if (e.type === "passthrough.update") setPassthrough(e.hosts);
       },
       resync,
     );
-  }, [upsert, setPassthrough, appendWsMessage]);
+  }, [upsert, setPassthrough, appendWsMessage, mergeWsMessages]);
   return (
     <div className="app">
       <TopBar onConnect={() => setShowConnect(true)} />

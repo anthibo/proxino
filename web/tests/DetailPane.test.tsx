@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { DetailPane } from "../src/components/DetailPane";
 import { useStore } from "../src/store";
 import type { FlowDetail } from "../src/types";
@@ -59,5 +59,37 @@ describe("DetailPane Body tab request body", () => {
     expect(screen.getByText("REQUEST BODY")).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("button", { name: /^Raw$/i })[0]);
     expect(screen.getByText("binary body, 2048 bytes")).toBeInTheDocument();
+  });
+});
+
+describe("DetailPane live ws meta", () => {
+  const wsDetail: FlowDetail = {
+    ...detail, id: "w", kind: "ws", response: null,
+    ws: { messages: 2, open: true, closed_by: null, close_code: null, close_reason: null },
+  };
+
+  it("updates the Overview Frames line from a live upsertFlow without re-selecting", async () => {
+    useStore.getState().clear();
+    useStore.getState().upsertFlow({ ...wsDetail });
+    useStore.getState().select("w", wsDetail);
+    render(<DetailPane />);
+    fireEvent.click(screen.getByRole("button", { name: /Overview/i }));
+    expect(screen.getByText("2 · open")).toBeInTheDocument();
+    useStore.getState().upsertFlow({ ...wsDetail, ws: { messages: 7, open: true, closed_by: null, close_code: null, close_reason: null } });
+    await waitFor(() => expect(screen.getByText("7 · open")).toBeInTheDocument());
+  });
+
+  it("makes the Messages tab reachable once a plain-selected row turns out to be a ws flow", () => {
+    // A row can be selected while it is still a pending/plain flow.new event,
+    // before the websocket_start update tags it kind: "ws" -- the detail
+    // pane must react to that live upgrade even though `detail` itself
+    // (fetched once at selection time) is stale.
+    useStore.getState().clear();
+    const plainMeta = { ...wsDetail, kind: undefined, ws: null };
+    useStore.getState().upsertFlow(plainMeta);
+    useStore.getState().select("w", plainMeta as FlowDetail);
+    useStore.getState().upsertFlow({ ...wsDetail, ws: { messages: 3, open: true, closed_by: null, close_code: null, close_reason: null } });
+    render(<DetailPane />);
+    expect(screen.getByRole("button", { name: /Messages/i })).toBeInTheDocument();
   });
 });

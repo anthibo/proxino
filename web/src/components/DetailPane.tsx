@@ -23,7 +23,15 @@ function wsFramesLine(ws: NonNullable<import("../types").FlowMeta["ws"]>): strin
 
 export function DetailPane({ width }: { width?: number } = {}) {
   const detail = useStore((s) => s.detail);
-  const isWs = detail?.kind === "ws";
+  // The detail body/headers/etc. come from the one-shot fetch at selection
+  // time, but the ws summary (open/messages/closed_by) keeps changing while
+  // a socket is live -- pull it from the live flow map so the Overview line
+  // and the Messages tab's reachability track flow.update events instead of
+  // freezing at whatever `detail` looked like when the row was selected.
+  const liveMeta = useStore((s) => (s.selectedId ? s.flows.get(s.selectedId) : undefined));
+  const meta = liveMeta ?? detail ?? undefined;
+  const isWs = meta?.kind === "ws";
+  const ws = meta?.ws;
   const [tab, setTab] = useState<Tab>("body");
   const [replayOpen, setReplayOpen] = useState(false);
   useEffect(() => {
@@ -71,8 +79,8 @@ export function DetailPane({ width }: { width?: number } = {}) {
           <div className="gen-row"><span className="gk">Status</span><span className="gv">{r ? `${r.status} ${r.reason}` : detail.state}</span></div>
           <div className="gen-row"><span className="gk">Started</span><span className="gv mono">{clockTime(detail.timestamp)}</span></div>
           <div className="gen-row"><span className="gk">Duration</span><span className="gv mono">{detail.duration_ms != null ? `${detail.duration_ms} ms` : "—"}</span></div>
-          {isWs && detail.ws && (
-            <div className="gen-row"><span className="gk">Frames</span><span className="gv mono">{wsFramesLine(detail.ws)}</span></div>
+          {isWs && ws && (
+            <div className="gen-row"><span className="gk">Frames</span><span className="gv mono">{wsFramesLine(ws)}</span></div>
           )}
         </div>
       )}
@@ -114,7 +122,7 @@ export function DetailPane({ width }: { width?: number } = {}) {
           </div>
         </div>
       )}
-      {tab === "messages" && <WsMessages flowId={detail.id} />}
+      {tab === "messages" && <WsMessages key={detail.id} flowId={detail.id} />}
       {tab === "timing" && <Timing timing={detail.timing} />}
     </div>
   );

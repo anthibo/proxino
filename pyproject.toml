@@ -20,7 +20,7 @@ classifiers = [
     "Topic :: Internet :: Proxy Servers",
     "Topic :: Software Development :: Debuggers",
 ]
-dependencies = ["mitmproxy>=11", "fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2.6"]
+dependencies = ["mitmproxy>=11", "fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2.6", "msgpack>=1.0"]
 
 [project.urls]
 Homepage = "https://github.com/anthibo/proxino"

@@ -271,6 +271,27 @@ async def test_websocket_message_count_updates_are_throttled():
     # start + first message + one after the 250 ms window
     assert len(updates) == 3 and updates[-1]["flow"]["ws"]["messages"] == 6
 
+async def test_open_ws_flow_survives_newer_http_flows_under_cap():
+    # An open websocket that keeps receiving frames must not be evicted from
+    # _mflows just because it went quiet at the LRU end while newer http
+    # flows push it out -- every touch (start/message) should refresh it.
+    addon = Proxino()
+    addon._mflow_cap = 3
+    async def fake_publish(evt): pass
+    addon.broadcaster.publish = fake_publish
+    from mitmproxy.test import tflow as _t
+    with taddons.context(addon):
+        f = _ws_flow()
+        addon.websocket_start(f)
+        for k in range(3):
+            g = _t.tflow(resp=True); g.client_conn.peername = ("1.1.1.1", k); addon.response(g)
+            f.websocket.messages.append(WebSocketMessage(1, True, b"x", float(k)))
+            addon.websocket_message(f)
+        await addon._flush_for_test()
+    assert f.id in addon._mflows
+    msgs, total = addon.wsstore.get(f.id)
+    assert total == 3 and len(msgs) == 3
+
 async def test_ws_frames_evicted_with_flow():
     addon = Proxino()
     addon._mflow_cap = 1

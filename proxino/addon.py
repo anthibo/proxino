@@ -62,6 +62,7 @@ class Proxino:
         while len(self._mflows) > self._mflow_cap:
             old_id, _ = self._mflows.popitem(last=False)
             self.wsstore.evict(old_id)
+            self._ws_throttle.pop(old_id, None)
         self._publish({"type": evt_type, "flow": rec.meta()})
 
     def tls_clienthello(self, data) -> None:
@@ -117,10 +118,15 @@ class Proxino:
         self._publish({"type": "flow.update", "flow": rec.meta()})
 
     def websocket_start(self, flow: HTTPFlow) -> None:
+        already_tracked = flow.id in self._mflows
         self._mflows[flow.id] = flow
+        if already_tracked:
+            self._mflows.move_to_end(flow.id)
         self._emit_ws_update(flow)
 
     def websocket_message(self, flow: HTTPFlow) -> None:
+        if flow.id in self._mflows:
+            self._mflows.move_to_end(flow.id)
         if not flow.websocket or not flow.websocket.messages:
             return
         m = flow.websocket.messages[-1]

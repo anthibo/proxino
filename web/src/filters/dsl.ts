@@ -28,10 +28,10 @@ const termPredicate = (token: string): Predicate => {
     return (f) => [f.method, f.host, f.path].some((v) => v.toLowerCase().includes(t));
   }
   const [, field, op, raw] = m;
+  if (op === ":" && field === "type" && raw === "ws") {
+    return (f) => f.kind === "ws";
+  }
   return (f) => {
-    if (op === ":" && field === "type" && raw === "ws") {
-      return f.kind === "ws";
-    }
     const val = fieldValue(f, field);
     if (op === ">=") return Number(val) >= Number(raw);
     if (op === "<=") return Number(val) <= Number(raw);
