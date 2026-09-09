@@ -1,3 +1,4 @@
+import asyncio
 from fastapi.testclient import TestClient
 from proxino.server import make_app
 from proxino.store import FlowStore
@@ -205,6 +206,43 @@ def test_paused_endpoints(tmp_path):
     assert calls["resume"] == ("p", {"headers": [["a", "b"]]})
     assert c.post("/api/paused/nope/resume").status_code == 404
     assert c.post("/api/paused/p/drop").json() == {"ok": True} and calls["drop"] == "p"
+
+def _paused_client(tmp_path, **kwargs):
+    from proxino.breakpoints import BreakpointEngine
+    eng = BreakpointEngine(lambda: {"enabled": True, "rules": []})
+    store = FlowStore(); store.add(make_flow(id="p", state="paused_request"))
+    class F:  # minimal flow stand-in for the engine
+        id = "p"; killable = True; is_replay = False
+        def intercept(self): pass
+        def resume(self): pass
+        def kill(self): pass
+    eng.pause(F(), "request", None)
+    reg = ClientRegistry(tmp_path / "c.json")
+    app = make_app(store, reg, Broadcaster(), breakpoints=eng, **kwargs)
+    return TestClient(app, raise_server_exceptions=False)
+
+def test_resume_runs_on_the_event_loop(tmp_path):
+    # resume_paused is invoked from the endpoint handler; it must see a running
+    # event loop (mitmproxy's flow.resume()/publish() are not thread-safe and
+    # asyncio.ensure_future requires one) rather than a threadpool worker thread.
+    def resume_paused(fid, edits):
+        asyncio.get_running_loop()
+        return {"flow_id": "p", "modified": False}
+
+    c = _paused_client(tmp_path, resume_paused=resume_paused)
+    resp = c.post("/api/paused/p/resume")
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "modified": False}
+
+def test_drop_runs_on_the_event_loop(tmp_path):
+    def drop_paused(fid):
+        asyncio.get_running_loop()
+        return {"flow_id": "p"}
+
+    c = _paused_client(tmp_path, drop_paused=drop_paused)
+    resp = c.post("/api/paused/p/drop")
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True}
 
 def test_ws_messages_endpoint(tmp_path):
     store = FlowStore(); store.add(make_flow(id="w", kind="ws", ws={"messages": 0, "open": True}))

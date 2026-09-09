@@ -182,7 +182,7 @@ def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | Non
         return out
 
     @app.post("/api/paused/{flow_id}/resume")
-    def resume(flow_id: str, body: ResumeBody | None = None) -> dict:
+    async def resume(flow_id: str, body: ResumeBody | None = None) -> dict:
         if resume_paused is None:
             raise HTTPException(status_code=503, detail="breakpoints unavailable")
         edits: dict[str, Any] = {}
@@ -194,7 +194,7 @@ def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | Non
         return {"ok": True, "modified": bool(result.get("modified"))}
 
     @app.post("/api/paused/{flow_id}/drop")
-    def drop(flow_id: str) -> dict:
+    async def drop(flow_id: str) -> dict:
         if drop_paused is None:
             raise HTTPException(status_code=503, detail="breakpoints unavailable")
         result = drop_paused(flow_id)
