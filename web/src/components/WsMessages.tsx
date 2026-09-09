@@ -12,13 +12,14 @@ const fmt = (t: number) => { const d = new Date(t * 1000); return `${String(d.ge
 
 export function WsMessages({ flowId }: { flowId: string }) {
   const msgs = useStore((s) => s.wsMessages[flowId] ?? []);
-  const setWsMessages = useStore((s) => s.setWsMessages);
+  const mergeWsMessages = useStore((s) => s.mergeWsMessages);
   const [dir, setDir] = useState<"all" | "in" | "out">("all");
   const [q, setQ] = useState("");
   const [follow, setFollow] = useState(true);
   const [open, setOpen] = useState<number | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { fetchWsMessages(flowId).then((r) => setWsMessages(flowId, r.messages)).catch(() => {}); }, [flowId, setWsMessages]);
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { fetchWsMessages(flowId).then((r) => mergeWsMessages(flowId, r.messages)).catch(() => {}); }, [flowId, mergeWsMessages]);
   useEffect(() => { if (follow) endRef.current?.scrollIntoView?.({ block: "end" }); }, [msgs.length, follow]);
   const rows = useMemo(() => msgs.filter((m) => (dir === "all" || m.dir === dir) && (!q || (m.text ?? "").toLowerCase().includes(q.toLowerCase()))), [msgs, dir, q]);
   return (
@@ -28,7 +29,15 @@ export function WsMessages({ flowId }: { flowId: string }) {
         <input className="wsm-search" placeholder="Search frames" value={q} onChange={(e) => setQ(e.target.value)} />
         <label className="wsm-follow"><input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} /> Follow</label>
       </div>
-      <div className="wsm-list" role="table">
+      <div
+        className="wsm-list"
+        role="table"
+        ref={listRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          if (el.scrollTop + el.clientHeight < el.scrollHeight - 8) setFollow(false);
+        }}
+      >
         {rows.map((m) => (
           <div key={m.i} role="row" className={"wsm-row " + m.dir + (open === m.i ? " open" : "")} onClick={() => setOpen(open === m.i ? null : m.i)}>
             <span className="wsm-dir"><Arrow dir={m.dir} /></span>

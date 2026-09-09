@@ -77,3 +77,31 @@ test("setWsMessages replaces", () => {
   useStore.getState().setWsMessages("w", [{ i: 9, t: 0, dir: "in", type: "binary", size: 2, text: null, view: null, pretty: null }]);
   expect(useStore.getState().wsMessages["w"].map((m) => m.i)).toEqual([9]);
 });
+
+const wm = (i: number) => ({ i, t: i, dir: "out" as const, type: "text" as const, size: 1, text: "x", view: null, pretty: null });
+
+test("mergeWsMessages unions existing and incoming by i, sorted ascending", () => {
+  useStore.getState().clear();
+  useStore.getState().appendWsMessage("w", wm(3));
+  useStore.getState().mergeWsMessages("w", [wm(0), wm(1), wm(2)]);
+  expect(useStore.getState().wsMessages["w"].map((m) => m.i)).toEqual([0, 1, 2, 3]);
+});
+
+test("mergeWsMessages collapses duplicates by i", () => {
+  useStore.getState().clear();
+  useStore.getState().appendWsMessage("w", wm(1));
+  useStore.getState().mergeWsMessages("w", [wm(0), wm(1), wm(2)]);
+  expect(useStore.getState().wsMessages["w"].map((m) => m.i)).toEqual([0, 1, 2]);
+});
+
+test("mergeWsMessages caps at 500", () => {
+  useStore.getState().clear();
+  for (let i = 0; i < 400; i++) useStore.getState().appendWsMessage("w", wm(i));
+  const incoming = [];
+  for (let i = 400; i < 600; i++) incoming.push(wm(i));
+  useStore.getState().mergeWsMessages("w", incoming);
+  const msgs = useStore.getState().wsMessages["w"];
+  expect(msgs.length).toBe(500);
+  expect(msgs[0].i).toBe(100);
+  expect(msgs[499].i).toBe(599);
+});

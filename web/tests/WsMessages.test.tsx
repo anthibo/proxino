@@ -1,14 +1,14 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { useStore } from "../src/store";
 import { WsMessages } from "../src/components/WsMessages";
 vi.mock("../src/api", () => ({ fetchWsMessages: vi.fn().mockResolvedValue({ messages: [], total: 0 }) }));
 const m = (i: number, dir: "in" | "out", text: string | null, extra = {}) =>
   ({ i, t: 1700000000 + i, dir, type: (text == null ? "binary" : "text") as "text" | "binary", size: text?.length ?? 4, text, view: null, pretty: null, ...extra });
-test("lists frames, filters by direction, expands pretty", () => {
+test("lists frames, filters by direction, expands pretty", async () => {
   useStore.getState().setWsMessages("w", [m(0, "out", '{"a":1}', { view: "json", pretty: '{\n  "a": 1\n}' }), m(1, "in", "pong"), m(2, "in", null)]);
   render(<WsMessages flowId="w" />);
-  expect(screen.getAllByRole("row")).toHaveLength(3);
+  expect(await screen.findAllByRole("row")).toHaveLength(3);
   expect(screen.getByText("binary · 4 B")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /^in$/i }));
   expect(screen.getAllByRole("row")).toHaveLength(2);
@@ -17,9 +17,25 @@ test("lists frames, filters by direction, expands pretty", () => {
   expect(screen.getByText(/"a": 1/)).toBeInTheDocument();
   expect(screen.getByText("json")).toBeInTheDocument();
 });
-test("search narrows rows", () => {
+test("search narrows rows", async () => {
   useStore.getState().setWsMessages("w", [m(0, "out", "hello there"), m(1, "in", "pong")]);
   render(<WsMessages flowId="w" />);
+  await screen.findAllByRole("row");
   fireEvent.change(screen.getByPlaceholderText(/search frames/i), { target: { value: "pong" } });
   expect(screen.getAllByRole("row")).toHaveLength(1);
+});
+test("scrolling up unchecks follow; re-checking re-enables it", async () => {
+  useStore.getState().setWsMessages("w", [m(0, "out", "a"), m(1, "in", "b")]);
+  render(<WsMessages flowId="w" />);
+  await screen.findAllByRole("row");
+  const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
+  expect(checkbox.checked).toBe(true);
+  const list = document.querySelector(".wsm-list") as HTMLDivElement;
+  Object.defineProperty(list, "scrollTop", { value: 0, configurable: true });
+  Object.defineProperty(list, "clientHeight", { value: 100, configurable: true });
+  Object.defineProperty(list, "scrollHeight", { value: 500, configurable: true });
+  fireEvent.scroll(list);
+  await waitFor(() => expect(checkbox.checked).toBe(false));
+  fireEvent.click(checkbox);
+  expect(checkbox.checked).toBe(true);
 });

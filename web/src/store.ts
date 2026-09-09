@@ -44,6 +44,7 @@ interface State {
   setDetailWidth: (n: number) => void;
   appendWsMessage: (flowId: string, m: WsMessage) => void;
   setWsMessages: (flowId: string, msgs: WsMessage[]) => void;
+  mergeWsMessages: (flowId: string, msgs: WsMessage[]) => void;
   clear: () => void;
   visibleFlows: () => FlowMeta[];
   allFlows: () => FlowMeta[];
@@ -78,6 +79,13 @@ export const useStore = create<State>((set, get) => ({
     return { wsMessages: { ...s.wsMessages, [flowId]: next } };
   }),
   setWsMessages: (flowId, msgs) => set((s) => ({ wsMessages: { ...s.wsMessages, [flowId]: msgs.slice(-500) } })),
+  mergeWsMessages: (flowId, msgs) => set((s) => {
+    const byI = new Map<number, WsMessage>();
+    for (const m of s.wsMessages[flowId] ?? []) byI.set(m.i, m);
+    for (const m of msgs) byI.set(m.i, m);
+    const next = Array.from(byI.values()).sort((a, b) => a.i - b.i).slice(-500);
+    return { wsMessages: { ...s.wsMessages, [flowId]: next } };
+  }),
   clear: () => set({ flows: new Map(), order: [], selectedId: null, detail: null, query: "", clientIp: null, wsMessages: {} }),
   visibleFlows: () => {
     const s = get();
