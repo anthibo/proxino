@@ -101,7 +101,7 @@ See [`docs/architecture.md`](https://github.com/anthibo/proxino/blob/main/docs/a
    - Open **http://mitm.it** on the device (through the proxy) and install the cert.
    - **iOS also needs:** Settings → General → About → **Certificate Trust Settings** → enable full trust. *(This step is easy to miss and is the usual cause of "no requests show up".)*
 
-Some apps use certificate pinning and will refuse the proxy's cert — those show up as `Client TLS handshake failed` in the log and can't be decrypted. That's expected.
+Some apps pin certificates (Instagram, Facebook, the iOS App Store/iCloud) and will refuse the proxy's cert every time — without this, they'd simply stop working while the phone is proxied. After two refusals Proxino passes that host through encrypted so the app keeps working, and lists it under **Passthrough** in the sidebar. You can retry decryption for a host from there once it stops pinning, or pre‑list known hosts under `"passthrough_hosts"` in `~/.proxino/config.json` to skip the two failed attempts.
 
 ---
 
