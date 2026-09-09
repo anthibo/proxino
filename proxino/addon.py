@@ -82,6 +82,7 @@ class Proxino:
                        replayer=self.replay, edited_replayer=self.replay_edited,
                        passthrough=self.passthrough,
                        wsstore=self.wsstore,
+                       on_clear=self.clear,
                        web_port=port, proxy_port=proxy_port)
         config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
         asyncio.ensure_future(uvicorn.Server(config).serve())
@@ -113,6 +114,11 @@ class Proxino:
             old_id, _ = self._mflows.popitem(last=False)
             self.wsstore.evict(old_id)
             self._ws_throttle.pop(old_id, None)
+            self._modified.discard(old_id)
+
+    def clear(self) -> None:
+        self.store.clear()
+        self._modified.clear()
 
     def _emit(self, evt_type: str, flow: HTTPFlow) -> None:
         rec = self._record(flow)
@@ -213,24 +219,12 @@ class Proxino:
         return entry
 
     def _sweep_once(self) -> None:
-        # Not `self.breakpoints.sweep()`: that engine method compares against
-        # a `deadline` frozen at pause() time (since + timeout_s as it stood
-        # then), so lowering `breakpoints.timeout_s` afterwards -- e.g. via a
-        # live settings change, or in tests -- has no effect on flows already
-        # paused. Recomputing staleness from `since` against the *current*
-        # timeout_s makes the timeout setting take effect immediately.
-        now = time.time()
-        stale_ids = [e["flow_id"] for e in self.breakpoints.paused()
-                     if now - e["since"] >= self.breakpoints.timeout_s]
-        for flow_id in stale_ids:
-            entry = self.breakpoints.resume(flow_id)
-            if entry is None:
-                continue
-            flow = self._mflows.get(flow_id)
+        for entry in self.breakpoints.sweep():
+            flow = self._mflows.get(entry["flow_id"])
             if flow is not None:
                 rec = self._record(flow, state="pending" if entry["phase"] == "request" else "complete")
                 self._publish({"type": "flow.update", "flow": rec.meta()})
-            self._publish({"type": "breakpoint.timeout", "flow_id": flow_id})
+            self._publish({"type": "breakpoint.timeout", "flow_id": entry["flow_id"]})
 
     async def _sweep_loop(self) -> None:
         while True:

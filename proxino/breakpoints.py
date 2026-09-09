@@ -82,15 +82,20 @@ class BreakpointEngine:
         path = req.path.split("?", 1)[0]
         return match_rule(rules, host=req.host, path=path, method=req.method, phase=phase)
 
-    @staticmethod
-    def public(entry: dict) -> dict:
-        return {k: v for k, v in entry.items() if not k.startswith("_")}
+    def public(self, entry: dict) -> dict:
+        out = {k: v for k, v in entry.items() if not k.startswith("_")}
+        # `deadline` is computed here from the *current* `timeout_s`, not
+        # frozen at pause() time, so a later change to `timeout_s` (e.g. a
+        # live settings update) is reflected immediately -- both in what
+        # callers read and in what sweep() below treats as stale.
+        out["deadline"] = entry["since"] + self.timeout_s
+        return out
 
     def pause(self, flow, phase: str, rule: BreakpointRule | None) -> dict:
         flow.intercept()
         since = self._wall()
         entry = {"flow_id": flow.id, "phase": phase, "rule_id": rule.id if rule else None,
-                 "since": since, "deadline": since + self.timeout_s, "_flow": flow}
+                 "since": since, "_flow": flow}
         self._paused[flow.id] = entry
         return self.public(entry)
 
@@ -127,7 +132,7 @@ class BreakpointEngine:
 
     def sweep(self) -> list[dict]:
         now = self._wall()
-        stale = [fid for fid, e in self._paused.items() if e["deadline"] <= now]
+        stale = [fid for fid, e in self._paused.items() if now - e["since"] >= self.timeout_s]
         out = []
         for fid in stale:
             e = self.resume(fid)

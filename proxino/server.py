@@ -26,6 +26,7 @@ def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | Non
              edited_replayer: Callable[[str, dict], bool] | None = None,
              passthrough=None,
              wsstore: "WsStore | None" = None,
+             on_clear: Callable[[], None] | None = None,
              web_port: int = 8081, proxy_port: int = 8080) -> FastAPI:
     app = FastAPI(title="Proxino")
 
@@ -44,7 +45,7 @@ def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | Non
 
     @app.delete("/api/flows")
     def clear() -> dict:
-        store.clear()
+        (on_clear or store.clear)()
         return {"ok": True}
 
     @app.get("/api/clients")

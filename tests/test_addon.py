@@ -220,6 +220,37 @@ async def test_mflow_map_evicts_with_capacity():
         assert len(addon._mflows) == 2
         assert ids[0] not in addon._mflows
 
+
+async def test_modified_set_discards_evicted_flow_id():
+    # `_modified` tracks flow ids edited at a breakpoint; once the underlying
+    # mflow is evicted from `_mflows` under capacity, the id must not linger
+    # in `_modified` forever.
+    addon = Proxino()
+    addon.store.capacity = 1
+    addon._mflow_cap = 1
+    async def noop(evt): pass
+    addon.broadcaster.publish = noop
+    from mitmproxy.test import tflow as _t
+    with taddons.context(addon):
+        f = _t.tflow(resp=True); f.client_conn.peername = ("1.1.1.1", 1)
+        addon.response(f)
+        addon._modified.add(f.id)
+        g = _t.tflow(resp=True); g.client_conn.peername = ("1.1.1.1", 2)
+        addon.response(g)  # evicts f under cap=1
+    assert f.id not in addon._mflows
+    assert f.id not in addon._modified
+
+
+async def test_clear_also_clears_modified_set():
+    addon = Proxino()
+    with taddons.context(addon):
+        f = tflow.tflow(resp=True); f.client_conn.peername = ("1.1.1.1", 1)
+        addon.response(f)
+    addon._modified.add(f.id)
+    addon.clear()
+    assert f.id not in addon._modified
+    assert addon.store.list_meta() == []
+
 from mitmproxy.websocket import WebSocketData, WebSocketMessage
 from mitmproxy.test import tflow
 

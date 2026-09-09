@@ -28,6 +28,22 @@ def test_clear_and_clients_and_labels(tmp_path):
     c.delete("/api/flows")
     assert c.get("/api/flows").json() == []
 
+
+def test_clear_uses_provided_hook_instead_of_bare_store_clear(tmp_path):
+    # DELETE /api/flows must go through the addon's own clear hook (which also
+    # drops breakpoint bookkeeping like `_modified`), not call store.clear()
+    # directly -- otherwise addon-side state tied to cleared flows leaks.
+    store = FlowStore(); store.add(make_flow(id="a"))
+    reg = ClientRegistry(tmp_path / "c.json")
+    calls = []
+    def on_clear():
+        calls.append(1)
+        store.clear()
+    c = TestClient(make_app(store, reg, Broadcaster(), on_clear=on_clear))
+    c.delete("/api/flows")
+    assert calls == [1]
+    assert c.get("/api/flows").json() == []
+
 def test_connect_info(tmp_path):
     c, _, _ = client(tmp_path)
     info = c.get("/api/connect-info").json()
