@@ -27,3 +27,15 @@ def test_meta_excludes_bodies():
 def test_full_serialization_includes_bodies():
     d = make_flow().model_dump()
     assert d["response"]["body"] == '{"ok":true}'
+
+def test_meta_strips_body_pretty_but_keeps_body_view():
+    flow = make_flow(response={
+        "status": 200, "reason": "OK", "headers": [], "size": 12,
+        "content_type": "application/x-protobuf", "body": None,
+        "body_view": "protobuf", "body_pretty": "1: 150\n",
+    })
+    meta = flow.meta()
+    assert "body_pretty" not in meta["response"]
+    assert meta["response"]["body_view"] == "protobuf"
+    d = flow.model_dump()
+    assert d["response"]["body_pretty"] == "1: 150\n"

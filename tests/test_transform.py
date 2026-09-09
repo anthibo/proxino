@@ -82,3 +82,27 @@ def test_negative_connect_phase_is_none(tmp_path, monkeypatch):
     mf.server_conn.timestamp_tcp_setup = mf.request.timestamp_start - 5
     rec = flow_to_record(mf, reg)
     assert rec.timing.connect_ms is None    # negative guarded to None
+
+def test_transform_binary_body_is_none_not_mojibake(tmp_path):
+    reg = ClientRegistry(tmp_path / "c.json")
+    # invalid utf-8 bytes (lone continuation byte + high bytes) — a real binary payload
+    binary = b"\xff\xfe\x00\x01\x02\x03\x80\x81"
+    resp = tutils.tresp(status_code=200, content=binary,
+                        headers=((b"content-type", b"application/octet-stream"),))
+    mf = tflow.tflow(req=tutils.treq(), resp=resp)
+    rec = flow_to_record(mf, reg)
+    assert rec.response.body is None
+    assert rec.response.size == len(binary)
+
+def test_transform_decodes_protobuf_response_body(tmp_path):
+    reg = ClientRegistry(tmp_path / "c.json")
+    resp = tutils.tresp(status_code=200, content=b"\x08\x96\x01",
+                        headers=((b"content-type", b"application/x-protobuf"),))
+    mf = tflow.tflow(req=tutils.treq(), resp=resp)
+    rec = flow_to_record(mf, reg)
+    assert rec.response.body_view == "protobuf"
+    assert rec.response.body_pretty
+    assert "150" in rec.response.body_pretty
+    meta = rec.meta()
+    assert "body_pretty" not in meta["response"]
+    assert meta["response"]["body_view"] == "protobuf"

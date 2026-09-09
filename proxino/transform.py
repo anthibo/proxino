@@ -1,6 +1,7 @@
 from __future__ import annotations
 from mitmproxy.http import HTTPFlow
 from .clients import ClientRegistry
+from .decode import decode_body
 from .models import Flow, Request, Response, Timing, ClientRef
 
 _MAX_BODY = 256 * 1024
@@ -10,6 +11,10 @@ def _ms(ts: float | None) -> int | None:
 
 def _body(raw: bytes | None) -> str | None:
     if not raw:
+        return None
+    try:
+        raw.decode("utf-8")  # validate the full payload is text, not binary
+    except UnicodeDecodeError:
         return None
     return raw[:_MAX_BODY].decode("utf-8", errors="replace")
 
@@ -22,17 +27,27 @@ def flow_to_record(mflow: HTTPFlow, registry: ClientRegistry) -> Flow:
     ua = r.headers.get("user-agent")
     label, kind = registry.device_for(ip, ua)
     path, _, query = r.path.partition("?")
+    req_content = r.get_content(strict=False)
+    req_content_type = r.headers.get("content-type")
+    req_view = decode_body(req_content, req_content_type, r)
     req = Request(headers=_headers(r.headers),
-                  size=len(r.raw_content or b""), body=_body(r.get_content(strict=False)))
+                  size=len(r.raw_content or b""), body=_body(req_content),
+                  body_view=req_view[0] if req_view else None,
+                  body_pretty=req_view[1] if req_view else None)
     resp = None
     state = "pending"
     if mflow.response is not None:
         rp = mflow.response
+        resp_content = rp.get_content(strict=False)
+        resp_content_type = rp.headers.get("content-type", "")
+        resp_view = decode_body(resp_content, resp_content_type, rp)
         resp = Response(status=rp.status_code, reason=rp.reason or "",
                         headers=_headers(rp.headers),
                         size=len(rp.raw_content or b""),
-                        content_type=rp.headers.get("content-type", ""),
-                        body=_body(rp.get_content(strict=False)))
+                        content_type=resp_content_type,
+                        body=_body(resp_content),
+                        body_view=resp_view[0] if resp_view else None,
+                        body_pretty=resp_view[1] if resp_view else None)
         state = "complete"
     if getattr(mflow, "error", None):
         state = "error"

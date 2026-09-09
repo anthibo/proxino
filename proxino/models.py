@@ -14,6 +14,8 @@ class Request(BaseModel):
     headers: list[Header] = []
     size: int = 0
     body: Optional[str] = None
+    body_view: Optional[str] = None
+    body_pretty: Optional[str] = None
 
 class Response(BaseModel):
     status: int
@@ -22,6 +24,8 @@ class Response(BaseModel):
     size: int = 0
     content_type: str = ""
     body: Optional[str] = None
+    body_view: Optional[str] = None
+    body_pretty: Optional[str] = None
 
 class Timing(BaseModel):
     start: int
@@ -56,7 +60,9 @@ class Flow(BaseModel):
     def meta(self) -> dict:
         d = self.model_dump()
         d["request"].pop("body", None)
+        d["request"].pop("body_pretty", None)
         if d["response"] is not None:
             d["response"].pop("body", None)
+            d["response"].pop("body_pretty", None)
         d["duration_ms"] = self.timing.duration_ms
         return d
