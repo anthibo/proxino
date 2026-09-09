@@ -9,6 +9,11 @@ import { ReplayModal } from "./ReplayModal";
 
 type Tab = "overview" | "headers" | "body" | "timing";
 
+function requestContentType(headers: [string, string][]): string | undefined {
+  const h = headers.find(([k]) => k.toLowerCase() === "content-type");
+  return h?.[1];
+}
+
 export function DetailPane({ width }: { width?: number } = {}) {
   const detail = useStore((s) => s.detail);
   const [tab, setTab] = useState<Tab>("body");
@@ -60,7 +65,36 @@ export function DetailPane({ width }: { width?: number } = {}) {
           ))}
         </div>
       )}
-      {tab === "body" && <JsonView body={r?.body ?? null} contentType={r?.content_type} status={r?.status} reason={r?.reason} />}
+      {tab === "body" && (
+        <div className="body-tab">
+          {detail.request.body && (
+            <>
+              <div className="body-tab-req">
+                <JsonView
+                  label="REQUEST BODY"
+                  body={detail.request.body}
+                  contentType={requestContentType(detail.request.headers)}
+                  view={detail.request.body_view}
+                  pretty={detail.request.body_pretty}
+                />
+              </div>
+              <div className="body-divider" />
+            </>
+          )}
+          <div className="body-tab-resp">
+            <JsonView
+              label="RESPONSE BODY"
+              body={r?.body ?? null}
+              contentType={r?.content_type}
+              status={r?.status}
+              reason={r?.reason}
+              view={r?.body_view}
+              pretty={r?.body_pretty}
+              size={r?.size}
+            />
+          </div>
+        </div>
+      )}
       {tab === "timing" && <Timing timing={detail.timing} />}
     </div>
   );

@@ -25,3 +25,26 @@ describe("DetailPane tabs", () => {
     expect(screen.getByText(/content-type/)).toBeInTheDocument();
   });
 });
+
+describe("DetailPane Body tab request body", () => {
+  it("shows both REQUEST BODY and RESPONSE BODY sections for a POST with a JSON request body", () => {
+    const postDetail: FlowDetail = {
+      ...detail,
+      method: "POST",
+      request: { headers: [["content-type", "application/json"]], size: 10, body: '{"name":"x"}' },
+    };
+    useStore.getState().select("a", postDetail);
+    render(<DetailPane />);
+    expect(screen.getByText("REQUEST BODY")).toBeInTheDocument();
+    expect(screen.getByText("RESPONSE BODY")).toBeInTheDocument();
+    expect(screen.getByText(/"name"/)).toBeInTheDocument();
+    expect(screen.getByText(/"ok"/)).toBeInTheDocument();
+  });
+
+  it("shows only RESPONSE BODY for a GET with no request body", () => {
+    useStore.getState().select("a", detail);
+    render(<DetailPane />);
+    expect(screen.queryByText("REQUEST BODY")).not.toBeInTheDocument();
+    expect(screen.getByText("RESPONSE BODY")).toBeInTheDocument();
+  });
+});

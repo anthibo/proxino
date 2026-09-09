@@ -77,8 +77,9 @@ function RawLines({ text, markup }: { text: string; markup?: boolean }) {
 
 type Mode = "pretty" | "raw" | "preview";
 
-export function JsonView({ body, contentType, status, reason }:
-  { body: string | null; contentType?: string; status?: number; reason?: string }) {
+export function JsonView({ body, contentType, status, reason, label = "RESPONSE BODY", view, pretty, size }:
+  { body: string | null; contentType?: string; status?: number; reason?: string;
+    label?: string; view?: string | null; pretty?: string | null; size?: number }) {
   const [mode, setMode] = useState<Mode>("pretty");
   const [collapseSignal, setCollapseSignal] = useState(0);
   const parsed = parse(body);
@@ -89,12 +90,16 @@ export function JsonView({ body, contentType, status, reason }:
   const isError = status != null && status >= 400;
   const effMode: Mode = mode === "preview" && !canPreview ? "pretty" : mode;
   const prettyJson = isJson ? JSON.stringify(parsed.value, null, 2) : "";
+  const hasDecodedView = !!(view && pretty);
+  const binaryPlaceholder = body == null && size != null && size > 0
+    ? `binary body, ${size} bytes` : null;
 
   return (
     <div className="jsonview">
       <div className="jv-toolbar">
-        <span className="jv-label">RESPONSE BODY</span>
+        <span className="jv-label">{label}</span>
         {contentType && <span className="jv-ct">{contentType.split(";")[0]}</span>}
+        {view && <span className="jv-ct jv-view-badge">{view}</span>}
         <span className="jv-tbspace" />
         <div className="seg">
           <button className={"seg-item" + (effMode === "pretty" ? " active" : "")} onClick={() => setMode("pretty")}>Pretty</button>
@@ -105,8 +110,14 @@ export function JsonView({ body, contentType, status, reason }:
         <button className="chip" onClick={() => body && navigator.clipboard.writeText(body)}>Copy</button>
       </div>
       {isError && <div className="jv-errbanner">⚠ {status} {reason || "Error response"}</div>}
-      {body == null ? (
-        <pre className="jv-raw jv-empty">(no body)</pre>
+      {hasDecodedView && effMode !== "raw" ? (
+        <RawLines text={pretty as string} />
+      ) : body == null ? (
+        effMode === "raw" && binaryPlaceholder ? (
+          <pre className="jv-raw jv-empty">{binaryPlaceholder}</pre>
+        ) : (
+          <pre className="jv-raw jv-empty">(no body)</pre>
+        )
       ) : effMode === "preview" ? (
         <iframe className="jv-preview" sandbox="" srcDoc={body} title="Response preview" />
       ) : isJson && effMode === "pretty" ? (

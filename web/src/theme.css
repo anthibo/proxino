@@ -899,6 +899,13 @@ html, body, #root {
 .jv-line { line-height: 1.6; }
 .jv-tag { color: var(--key); }
 .jv-preview { width: 100%; height: 440px; border: none; border-radius: 8px; background: #fff; }
+.jv-view-badge { color: var(--brandtx); background: var(--brandbg); }
+
+.body-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.body-tab-req { flex: 0 1 auto; max-height: 40%; min-height: 0; display: flex; overflow: hidden; }
+.body-tab-req .jsonview { height: auto; max-height: 100%; }
+.body-tab-resp { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+.body-divider { height: 1px; background: var(--border); flex-shrink: 0; margin: 4px 0; }
 
 /* ---- Footer status bar ---- */
 .statusbar { display: flex; align-items: center; gap: 8px; height: 30px; flex-shrink: 0;

@@ -2,8 +2,8 @@ export type Header = [string, string];
 export type FlowState = "pending" | "complete" | "error";
 export type DeviceKind = "phone" | "tablet" | "laptop" | "desktop" | "unknown";
 export interface ClientRef { ip: string; label: string; kind?: DeviceKind; }
-export interface ReqMeta { headers: Header[]; size: number; }
-export interface RespMeta { status: number; reason: string; headers: Header[]; size: number; content_type: string; }
+export interface ReqMeta { headers: Header[]; size: number; body_view?: string | null; }
+export interface RespMeta { status: number; reason: string; headers: Header[]; size: number; content_type: string; body_view?: string | null; }
 export interface TimingDetail {
   start: number;
   req_done: number | null;
@@ -24,8 +24,8 @@ export interface FlowMeta {
   duration_ms: number | null; state: FlowState; error: string | null;
 }
 export interface FlowDetail extends FlowMeta {
-  request: ReqMeta & { body: string | null };
-  response: (RespMeta & { body: string | null }) | null;
+  request: ReqMeta & { body: string | null; body_pretty?: string | null };
+  response: (RespMeta & { body: string | null; body_pretty?: string | null }) | null;
   timing: TimingDetail;
 }
 export interface ClientInfo { ip: string; label: string; count: number; kind?: DeviceKind; }
