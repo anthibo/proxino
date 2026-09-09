@@ -1,5 +1,5 @@
 export type Header = [string, string];
-export type FlowState = "pending" | "complete" | "error";
+export type FlowState = "pending" | "complete" | "error" | "paused_request" | "paused_response";
 export type DeviceKind = "phone" | "tablet" | "laptop" | "desktop" | "unknown";
 export interface ClientRef { ip: string; label: string; kind?: DeviceKind; }
 export interface ReqMeta { headers: Header[]; size: number; body_view?: string | null; }
@@ -30,7 +30,7 @@ export interface FlowMeta {
   server_addr?: string | null; tls_version?: string | null;
   request: ReqMeta; response: RespMeta | null;
   duration_ms: number | null; state: FlowState; error: string | null;
-  kind?: "http" | "ws"; ws?: WsSummary | null;
+  kind?: "http" | "ws"; ws?: WsSummary | null; modified?: boolean;
 }
 export interface FlowDetail extends FlowMeta {
   request: ReqMeta & { body: string | null; body_pretty?: string | null };
@@ -42,9 +42,24 @@ export interface PassthroughHost {
   host: string; source: "auto" | "config"; active: boolean; failures: number;
   clients: string[]; first_seen: number; last_seen: number;
 }
+export interface BreakpointRule {
+  id: string; enabled: boolean; host: string; path: string; method: string;
+  phase: "request" | "response" | "both";
+}
+export interface Breakpoints { enabled: boolean; rules: BreakpointRule[]; }
+export interface PausedEntry {
+  flow_id: string; phase: "request" | "response"; rule_id: string | null;
+  since: number; deadline: number; flow: FlowDetail;
+}
+
 export type WSEvent =
   | { type: "flow.new" | "flow.complete" | "flow.error"; flow: FlowMeta }
   | { type: "client.new"; client: ClientInfo }
   | { type: "passthrough.update"; hosts: PassthroughHost[] }
   | { type: "flow.update"; flow: FlowMeta }
-  | { type: "ws.message"; flow_id: string; message: WsMessage };
+  | { type: "ws.message"; flow_id: string; message: WsMessage }
+  | { type: "breakpoints.update"; enabled: boolean; rules: BreakpointRule[] }
+  | { type: "breakpoint.paused"; entry: Omit<PausedEntry, "flow">; flow: FlowDetail }
+  | { type: "breakpoint.resumed"; flow_id: string; modified: boolean }
+  | { type: "breakpoint.dropped"; flow_id: string }
+  | { type: "breakpoint.timeout"; flow_id: string };

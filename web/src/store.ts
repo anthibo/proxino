@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { FlowMeta, FlowDetail, PassthroughHost, WsMessage } from "./types";
+import type { FlowMeta, FlowDetail, PassthroughHost, WsMessage, Breakpoints, PausedEntry } from "./types";
 import { parseQuery } from "./filters/dsl";
 
 export type View = "inspector" | "devices" | "dashboard";
@@ -35,6 +35,8 @@ interface State {
   passthrough: PassthroughHost[];
   detailWidth: number;
   wsMessages: Record<string, WsMessage[]>;
+  breakpoints: Breakpoints;
+  paused: Record<string, PausedEntry>;
   setView: (v: View) => void;
   upsertFlow: (f: FlowMeta) => void;
   setQuery: (q: string) => void;
@@ -45,6 +47,10 @@ interface State {
   appendWsMessage: (flowId: string, m: WsMessage) => void;
   setWsMessages: (flowId: string, msgs: WsMessage[]) => void;
   mergeWsMessages: (flowId: string, msgs: WsMessage[]) => void;
+  setBreakpoints: (b: Breakpoints) => void;
+  setPaused: (list: PausedEntry[]) => void;
+  addPaused: (entry: Omit<PausedEntry, "flow">, flow: FlowDetail) => void;
+  removePaused: (flowId: string) => void;
   clear: () => void;
   visibleFlows: () => FlowMeta[];
   allFlows: () => FlowMeta[];
@@ -55,6 +61,8 @@ export const useStore = create<State>((set, get) => ({
   query: "", clientIp: null, view: "inspector", passthrough: [],
   detailWidth: loadDetailWidth(),
   wsMessages: {},
+  breakpoints: { enabled: false, rules: [] },
+  paused: {},
   setView: (view) => set({ view }),
   setPassthrough: (passthrough) => set({ passthrough }),
   setDetailWidth: (n) => {
@@ -85,6 +93,15 @@ export const useStore = create<State>((set, get) => ({
     for (const m of msgs) byI.set(m.i, m);
     const next = Array.from(byI.values()).sort((a, b) => a.i - b.i).slice(-500);
     return { wsMessages: { ...s.wsMessages, [flowId]: next } };
+  }),
+  setBreakpoints: (breakpoints) => set({ breakpoints }),
+  setPaused: (list) => set({ paused: Object.fromEntries(list.map((e) => [e.flow_id, e])) }),
+  addPaused: (entry, flow) => set((s) => ({ paused: { ...s.paused, [entry.flow_id]: { ...entry, flow } } })),
+  removePaused: (flowId) => set((s) => {
+    if (!(flowId in s.paused)) return s;
+    const paused = { ...s.paused };
+    delete paused[flowId];
+    return { paused };
   }),
   clear: () => set({ flows: new Map(), order: [], selectedId: null, detail: null, query: "", clientIp: null, wsMessages: {} }),
   visibleFlows: () => {

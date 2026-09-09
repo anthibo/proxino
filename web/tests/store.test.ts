@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useStore } from "../src/store";
-import type { FlowMeta } from "../src/types";
+import type { FlowMeta, FlowDetail, PausedEntry } from "../src/types";
 
 const mk = (id: string, o: Partial<FlowMeta> = {}): FlowMeta => ({
   id, timestamp: Number(id), client: { ip: "1.1.1.1", label: "x" },
@@ -104,4 +104,34 @@ test("mergeWsMessages caps at 500", () => {
   expect(msgs.length).toBe(500);
   expect(msgs[0].i).toBe(100);
   expect(msgs[499].i).toBe(599);
+});
+
+const mkDetail = (id: string): FlowDetail => ({
+  id, timestamp: Number(id), client: { ip: "1.1.1.1", label: "x" },
+  method: "GET", scheme: "https", host: "api.soum.sa", port: 443,
+  path: "/v2/" + id, query: "", http_version: "HTTP/2",
+  request: { headers: [], size: 0, body: null },
+  response: { status: 200, reason: "", headers: [], size: 0, content_type: "application/json", body: null },
+  duration_ms: 1, state: "paused_request", error: null,
+  timing: { start: 0, req_done: null, resp_start: null, resp_done: null, duration_ms: null, connect_ms: null, tls_ms: null, ttfb_ms: null, download_ms: null },
+});
+
+describe("store.paused", () => {
+  beforeEach(() => useStore.getState().clear());
+  it("addPaused/removePaused round-trip", () => {
+    const flow = mkDetail("f1");
+    useStore.getState().addPaused({ flow_id: "f1", phase: "request", rule_id: "r1", since: 1, deadline: 61 }, flow);
+    expect(useStore.getState().paused["f1"]).toMatchObject({ flow_id: "f1", phase: "request", rule_id: "r1", flow });
+    useStore.getState().removePaused("f1");
+    expect(useStore.getState().paused["f1"]).toBeUndefined();
+  });
+  it("setPaused rebuilds the record keyed by flow_id", () => {
+    const list: PausedEntry[] = [
+      { flow_id: "a", phase: "request", rule_id: null, since: 1, deadline: 61, flow: mkDetail("a") },
+      { flow_id: "b", phase: "response", rule_id: "r2", since: 2, deadline: 62, flow: mkDetail("b") },
+    ];
+    useStore.getState().setPaused(list);
+    expect(Object.keys(useStore.getState().paused).sort()).toEqual(["a", "b"]);
+    expect(useStore.getState().paused["b"].rule_id).toBe("r2");
+  });
 });

@@ -10,7 +10,7 @@ import { DevicesView } from "./components/DevicesView";
 import { DashboardView } from "./components/DashboardView";
 import { ConnectDeviceModal } from "./components/ConnectDeviceModal";
 import { connectWS } from "./ws";
-import { fetchFlows, fetchPassthrough, fetchWsMessages } from "./api";
+import { fetchFlows, fetchPassthrough, fetchWsMessages, fetchBreakpoints, fetchPaused } from "./api";
 import { useStore } from "./store";
 import "./theme.css";
 
@@ -20,6 +20,10 @@ export function App() {
   const setPassthrough = useStore((s) => s.setPassthrough);
   const appendWsMessage = useStore((s) => s.appendWsMessage);
   const mergeWsMessages = useStore((s) => s.mergeWsMessages);
+  const setBreakpoints = useStore((s) => s.setBreakpoints);
+  const setPaused = useStore((s) => s.setPaused);
+  const addPaused = useStore((s) => s.addPaused);
+  const removePaused = useStore((s) => s.removePaused);
   const view = useStore((s) => s.view);
   const isEmpty = useStore((s) => s.flows.size === 0);
   const detailWidth = useStore((s) => s.detailWidth);
@@ -65,6 +69,8 @@ export function App() {
     const resync = () => {
       fetchFlows().then((fs) => fs.forEach(upsert)).catch(() => {});
       fetchPassthrough().then(setPassthrough).catch(() => {});
+      fetchBreakpoints().then(setBreakpoints).catch(() => {});
+      fetchPaused().then(setPaused).catch(() => {});
       // A reconnect can follow a dropped connection during which frames on
       // the currently open ws flow were missed, so re-pull its buffer too.
       const { selectedId } = useStore.getState();
@@ -76,6 +82,9 @@ export function App() {
     return connectWS(
       (e) => {
         if (e.type === "flow.update") upsert(e.flow);
+        else if (e.type === "breakpoints.update") setBreakpoints({ enabled: e.enabled, rules: e.rules });
+        else if (e.type === "breakpoint.paused") addPaused(e.entry, e.flow);
+        else if (e.type === "breakpoint.resumed" || e.type === "breakpoint.dropped" || e.type === "breakpoint.timeout") removePaused(e.flow_id);
         else if ("flow" in e) upsert(e.flow);
         else if (e.type === "ws.message") {
           if (e.flow_id === useStore.getState().selectedId) appendWsMessage(e.flow_id, e.message);
@@ -84,7 +93,7 @@ export function App() {
       },
       resync,
     );
-  }, [upsert, setPassthrough, appendWsMessage, mergeWsMessages]);
+  }, [upsert, setPassthrough, appendWsMessage, mergeWsMessages, setBreakpoints, setPaused, addPaused, removePaused]);
   return (
     <div className="app">
       <TopBar onConnect={() => setShowConnect(true)} />

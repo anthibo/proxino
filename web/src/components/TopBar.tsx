@@ -4,6 +4,17 @@ import { useStore } from "../store";
 import { ExportMenu } from "./ExportMenu";
 import { Settings } from "./Settings";
 import { LockOpenIcon } from "./LockOpenIcon";
+import { BreakpointsModal } from "./BreakpointsModal";
+
+function BreakpointIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4" />
+      <rect x="6" y="5" width="1.6" height="6" rx="0.5" fill="currentColor" />
+      <rect x="9" y="5" width="1.6" height="6" rx="0.5" fill="currentColor" />
+    </svg>
+  );
+}
 
 const VIEWS: { key: "inspector" | "devices" | "dashboard"; label: string }[] = [
   { key: "inspector", label: "Inspector" },
@@ -15,10 +26,14 @@ export function TopBar({ onConnect }: { onConnect: () => void }) {
   const clear = useStore((s) => s.clear);
   const upsert = useStore((s) => s.upsertFlow);
   const passthroughActiveCount = useStore((s) => s.passthrough.filter((p) => p.active).length);
+  const breakpoints = useStore((s) => s.breakpoints);
+  const pausedCount = useStore((s) => Object.keys(s.paused).length);
+  const armed = breakpoints.enabled && breakpoints.rules.some((r) => r.enabled);
   const view = useStore((s) => s.view);
   const setView = useStore((s) => s.setView);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showBreakpoints, setShowBreakpoints] = useState(false);
   const [proxy, setProxy] = useState<string | null>(null);
   const [caOk, setCaOk] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +91,12 @@ export function TopBar({ onConnect }: { onConnect: () => void }) {
             <LockOpenIcon size={13} />{passthroughActiveCount} passthrough
           </span>
         )}
+        <button className="chip tb-bp" onClick={() => setShowBreakpoints(true)}>
+          <span className={"tb-bp-dot " + (armed ? "armed" : "off")} />
+          <BreakpointIcon />
+          Breakpoints
+          {pausedCount > 0 && <span className="tb-bp-paused">{pausedCount}</span>}
+        </button>
       </div>
       <div className="view-switch" role="tablist">
         {VIEWS.map((v) => (
@@ -109,6 +130,7 @@ export function TopBar({ onConnect }: { onConnect: () => void }) {
       <button onClick={handleClear}>Clear</button>
       <button onClick={() => setShowSettings(true)}>Settings</button>
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
+      {showBreakpoints && <BreakpointsModal onClose={() => setShowBreakpoints(false)} />}
     </div>
   );
 }

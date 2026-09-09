@@ -764,6 +764,25 @@ html, body, #root {
 .rp-err { color: var(--err5xx); font-size: 12px; font-weight: 600; }
 .rp-ok { color: var(--ok); font-size: 12px; font-weight: 600; }
 
+/* BreakpointsModal */
+.bp-modal { max-width: 640px; }
+.bp-enabled { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; margin-bottom: 14px; }
+.bp-enabled input { accent-color: var(--brand); width: 15px; height: 15px; }
+.bp-rules { display: flex; flex-direction: column; gap: 8px; }
+.bp-row {
+  display: grid; grid-template-columns: 18px 1fr 1fr 88px 96px 26px;
+  gap: 8px; align-items: center;
+}
+.bp-row input[type="checkbox"] { accent-color: var(--brand); width: 15px; height: 15px; }
+.bp-row input:not([type="checkbox"]), .bp-row select {
+  background: var(--field); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 8px; font-size: 12.5px; min-width: 0;
+}
+.bp-row input:focus, .bp-row select:focus { outline: none; border-color: var(--brand); }
+.bp-error { color: var(--err5xx); font-size: 12px; font-weight: 600; margin: 8px 0 0; }
+.bp-actions { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
+.bp-spacer { flex: 1; }
+
 /* ---- Connect device wizard ---- */
 .connect-modal { max-width: 640px; }
 .cd-tabs { display: inline-flex; gap: 2px; background: var(--chip); border-radius: 8px; padding: 2px; margin-bottom: 16px; }
@@ -802,6 +821,10 @@ html, body, #root {
 .modal .rp-hdel:hover { background: transparent; color: var(--delete); opacity: 1; }
 .modal .rp-hadd { margin: 4px 0 0; padding: 5px 10px; background: var(--chip); border: 1px solid var(--border); color: var(--brandtx); font-weight: 500; }
 .modal .rp-hadd:hover { background: #212736; opacity: 1; }
+.modal .bp-del { margin: 0; padding: 4px 7px; background: transparent; border: none; color: var(--muted); font-weight: 400; }
+.modal .bp-del:hover { background: transparent; color: var(--delete); opacity: 1; }
+.modal .bp-add { margin: 4px 0 0; padding: 5px 10px; background: var(--chip); border: 1px solid var(--border); color: var(--brandtx); font-weight: 500; }
+.modal .bp-add:hover { background: #212736; opacity: 1; }
 
 /* ==================== Figma alignment pass (v2) ==================== */
 
@@ -858,6 +881,17 @@ html, body, #root {
 .pth-tag { padding: 4px 9px; font-size: 11px; color: var(--muted); cursor: default; }
 .pth-err { font-size: 10.5px; color: var(--err4xx); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tb-passthrough { color: var(--sec); }
+
+/* ---- Breakpoints top-bar entry ---- */
+.tb-bp-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+.tb-bp-dot.armed { background: var(--delete); }
+.tb-bp-dot.off { background: var(--muted); }
+.tb-bp-paused {
+  background: var(--delete); color: #0E1016; border-radius: 999px; padding: 1px 6px;
+  font-size: 10.5px; font-weight: 700; font-family: "JetBrains Mono", ui-monospace, monospace;
+  animation: tb-bp-pulse 1.3s ease-in-out infinite;
+}
+@keyframes tb-bp-pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
 
 /* ---- Flow table: header + 8 columns (dot method status host path type size time) ---- */
 .flowtable-cols, .flowhead, .flowrow {
