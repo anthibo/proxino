@@ -1,6 +1,7 @@
 from __future__ import annotations
 import asyncio
 import logging
+import time
 from collections import OrderedDict
 from pathlib import Path
 from mitmproxy import ctx
@@ -11,6 +12,7 @@ from proxino.clients import ClientRegistry
 from proxino.broadcaster import Broadcaster
 from proxino.transform import flow_to_record
 from proxino.passthrough import PassthroughRegistry
+from proxino.wsstore import WsStore
 
 _log = logging.getLogger("proxino")
 
@@ -22,6 +24,9 @@ class Proxino:
         self.passthrough = PassthroughRegistry(patterns=self.registry.passthrough_patterns())
         self._mflows: OrderedDict[str, HTTPFlow] = OrderedDict()
         self._mflow_cap = 5000
+        self.wsstore = WsStore()
+        self._ws_throttle: dict[str, float] = {}
+        self._ws_now = time.monotonic
 
     def load(self, loader: Loader) -> None:
         loader.add_option("proxino_web_port", int, 8081, "Proxino web UI port")
@@ -54,7 +59,8 @@ class Proxino:
         self._mflows[flow.id] = flow
         self._mflows.move_to_end(flow.id)
         while len(self._mflows) > self._mflow_cap:
-            self._mflows.popitem(last=False)
+            old_id, _ = self._mflows.popitem(last=False)
+            self.wsstore.evict(old_id)
         self._publish({"type": evt_type, "flow": rec.meta()})
 
     def tls_clienthello(self, data) -> None:
@@ -101,6 +107,32 @@ class Proxino:
 
     def error(self, flow: HTTPFlow) -> None:
         self._emit("flow.error", flow)
+
+    def _emit_ws_update(self, flow: HTTPFlow) -> None:
+        rec = flow_to_record(flow, self.registry)
+        if rec.ws is not None:
+            rec.ws.messages = self.wsstore.count(flow.id)   # authoritative count survives the deque cap
+        self.store.add(rec)
+        self._publish({"type": "flow.update", "flow": rec.meta()})
+
+    def websocket_start(self, flow: HTTPFlow) -> None:
+        self._mflows[flow.id] = flow
+        self._emit_ws_update(flow)
+
+    def websocket_message(self, flow: HTTPFlow) -> None:
+        if not flow.websocket or not flow.websocket.messages:
+            return
+        m = flow.websocket.messages[-1]
+        msg = self.wsstore.append(flow.id, m.from_client, m.is_text, m.content, m.timestamp)
+        self._publish({"type": "ws.message", "flow_id": flow.id, "message": msg})
+        now = self._ws_now()
+        if now - self._ws_throttle.get(flow.id, -1.0) >= 0.25:
+            self._ws_throttle[flow.id] = now
+            self._emit_ws_update(flow)
+
+    def websocket_end(self, flow: HTTPFlow) -> None:
+        self._ws_throttle.pop(flow.id, None)
+        self._emit_ws_update(flow)
 
     async def _flush_for_test(self) -> None:
         await asyncio.sleep(0)

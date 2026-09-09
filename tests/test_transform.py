@@ -106,3 +106,19 @@ def test_transform_decodes_protobuf_response_body(tmp_path):
     meta = rec.meta()
     assert "body_pretty" not in meta["response"]
     assert meta["response"]["body_view"] == "protobuf"
+
+from mitmproxy.websocket import WebSocketData
+from proxino.transform import flow_to_record
+from proxino.clients import ClientRegistry
+
+def test_ws_flow_gets_kind_and_summary(tmp_path):
+    f = tflow.tflow(resp=True)
+    f.websocket = WebSocketData()
+    rec = flow_to_record(f, ClientRegistry(tmp_path / "c.json"))
+    assert rec.kind == "ws" and rec.ws is not None and rec.ws.open is True and rec.ws.messages == 0
+
+def test_closed_ws_summary(tmp_path):
+    f = tflow.tflow(resp=True)
+    f.websocket = WebSocketData(closed_by_client=False, close_code=1000, close_reason="bye", timestamp_end=5.0)
+    rec = flow_to_record(f, ClientRegistry(tmp_path / "c.json"))
+    assert rec.ws.open is False and rec.ws.closed_by == "server" and rec.ws.close_code == 1000

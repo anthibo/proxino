@@ -73,6 +73,14 @@ def flow_to_record(mflow: HTTPFlow, registry: ClientRegistry) -> Flow:
                     resp_done=resp_done,
                     duration_ms=(resp_done - start) if resp_done is not None else None,
                     connect_ms=connect_ms, tls_ms=tls_ms, ttfb_ms=ttfb, download_ms=download)
+    ws = getattr(mflow, "websocket", None)
+    flow_kind = "ws" if ws is not None else "http"
+    ws_summary = None
+    if ws is not None:
+        from proxino.models import WsSummary
+        closed_by = None if ws.closed_by_client is None else ("client" if ws.closed_by_client else "server")
+        ws_summary = WsSummary(messages=len(ws.messages), open=ws.timestamp_end is None and ws.closed_by_client is None,
+                               closed_by=closed_by, close_code=ws.close_code, close_reason=ws.close_reason)
     return Flow(
         id=mflow.id, timestamp=start,
         client=ClientRef(ip=ip, label=label, kind=kind),
@@ -81,4 +89,5 @@ def flow_to_record(mflow: HTTPFlow, registry: ClientRegistry) -> Flow:
         server_addr=server_addr, tls_version=tls_version,
         request=req, response=resp, timing=timing, state=state,
         error=str(mflow.error) if getattr(mflow, "error", None) else None,
+        kind=flow_kind, ws=ws_summary,
     )
