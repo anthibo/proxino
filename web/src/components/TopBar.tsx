@@ -60,9 +60,9 @@ export function TopBar({ onConnect }: { onConnect: () => void }) {
   };
 
   return (
-    <div className="topbar">
+    <div className="topbar" data-tauri-drag-region="true">
       <div className="topbar-left">
-        <span className="brand">Proxino<span className="beta">BETA</span></span>
+        <span className="brand" data-tauri-drag-region="true">Proxino<span className="beta">BETA</span></span>
         <span className="tb-status"><span className="tb-dot live" />Listening
           <code className="tb-addr">{proxy ?? "…"}</code></span>
         <span className="tb-status"><span className="tb-dot rec" />Recording</span>

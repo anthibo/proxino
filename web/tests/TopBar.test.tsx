@@ -41,3 +41,21 @@ describe("TopBar passthrough pill", () => {
     expect(screen.queryByText(/passthrough/)).not.toBeInTheDocument();
   });
 });
+
+describe("TopBar window drag region (Tauri desktop shell)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useStore.getState().clear();
+  });
+
+  it("marks the root topbar element as a Tauri drag region", () => {
+    const { container } = render(<TopBar onConnect={() => {}} />);
+    const topbar = container.querySelector(".topbar");
+    expect(topbar).toHaveAttribute("data-tauri-drag-region");
+  });
+
+  it("marks the brand span as a Tauri drag region", () => {
+    const { container } = render(<TopBar onConnect={() => {}} />);
+    expect(container.querySelector(".brand")).toHaveAttribute("data-tauri-drag-region");
+  });
+});
