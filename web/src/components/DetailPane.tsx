@@ -42,7 +42,7 @@ export function DetailPane({ width }: { width?: number } = {}) {
   const pausedEntry = useStore((s) => (detail ? s.paused[detail.id] : undefined));
   const style = width != null ? { width } : undefined;
   if (!detail) return <div className="detail empty" style={style}>Select a request</div>;
-  if (pausedEntry) return <div className="detail" style={style}><PausedEditor entry={pausedEntry} /></div>;
+  if (pausedEntry) return <div className="detail" style={style}><PausedEditor key={pausedEntry.flow_id} entry={pausedEntry} /></div>;
   const r = detail.response;
   const tabs: Tab[] = isWs ? ["overview", "headers", "messages", "timing"] : ["overview", "headers", "body", "timing"];
   return (

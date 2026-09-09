@@ -771,6 +771,8 @@ html, body, #root {
 .countdown { color: var(--muted); font-size: 12px; }
 .pe-head { display: flex; align-items: center; gap: 8px; }
 .pe-title { font-weight: 600; font-size: 13px; }
+.rp-status-block { display: flex; flex-direction: column; gap: 4px; }
+.chip:disabled { opacity: .45; cursor: not-allowed; }
 
 /* BreakpointsModal */
 .bp-modal { max-width: 640px; }

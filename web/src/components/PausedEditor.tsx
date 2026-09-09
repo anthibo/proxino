@@ -35,9 +35,23 @@ export function PausedEditor({ entry }: { entry: PausedEntry }) {
 
   const headers = useMemo<[string, string][]>(
     () => rows.filter((r) => r.on && r.key).map((r) => [r.key, r.val]), [rows]);
+  // Order-insensitive: normalize both sides (sort by lowercased key then
+  // value) before comparing, so removing a header row and re-adding an
+  // equivalent one -- which shifts its position in the array -- doesn't
+  // register as a change.
+  const normalizeHeaders = (hs: [string, string][]) =>
+    [...hs].sort(([ak, av], [bk, bv]) => {
+      const k = ak.toLowerCase().localeCompare(bk.toLowerCase());
+      return k !== 0 ? k : av.localeCompare(bv);
+    });
   const headersChanged = useMemo(
-    () => JSON.stringify(headers) !== JSON.stringify(origHeaders), [headers, origHeaders]);
+    () => JSON.stringify(normalizeHeaders(headers)) !== JSON.stringify(normalizeHeaders(origHeaders)),
+    [headers, origHeaders]);
   const bodyChanged = body !== (origBody ?? "");
+
+  const statusNum = Number(status);
+  const statusValid = status.trim() !== "" && Number.isInteger(statusNum) && statusNum >= 100 && statusNum <= 599;
+  const statusError = !isReq && !statusValid;
 
   const buildEdits = (): Record<string, unknown> | undefined => {
     const edits: Record<string, unknown> = {};
@@ -45,8 +59,7 @@ export function PausedEditor({ entry }: { entry: PausedEntry }) {
       if (method !== flow.method) edits.method = method;
       if (url !== url0) edits.url = url;
     } else {
-      const n = Number(status);
-      if (!Number.isNaN(n) && n !== origStatus) edits.status = n;
+      if (statusNum !== origStatus) edits.status = statusNum;
       if (reason !== origReason) edits.reason = reason;
     }
     if (headersChanged) edits.headers = headers;
@@ -69,7 +82,7 @@ export function PausedEditor({ entry }: { entry: PausedEntry }) {
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (!(e.metaKey || e.ctrlKey)) return;
-    if (e.key === "Enter") { e.preventDefault(); doContinue(); }
+    if (e.key === "Enter") { e.preventDefault(); if (!statusError) doContinue(); }
     else if (e.key === "Backspace") { e.preventDefault(); doDrop(); }
   };
 
@@ -91,9 +104,12 @@ export function PausedEditor({ entry }: { entry: PausedEntry }) {
           <input className="rp-url" aria-label="URL" value={url} onChange={(e) => setUrl(e.target.value)} spellCheck={false} />
         </div>
       ) : (
-        <div className="rp-line">
-          <input className="rp-status" aria-label="Status" value={status} onChange={(e) => setStatusVal(e.target.value)} />
-          <input className="rp-reason" aria-label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} />
+        <div className="rp-status-block">
+          <div className="rp-line">
+            <input className="rp-status" aria-label="Status" value={status} onChange={(e) => setStatusVal(e.target.value)} />
+            <input className="rp-reason" aria-label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} />
+          </div>
+          {statusError && <div className="rp-err">Status must be a number between 100 and 599</div>}
         </div>
       )}
 
@@ -108,7 +124,7 @@ export function PausedEditor({ entry }: { entry: PausedEntry }) {
         <button className="chip" onClick={doDrop}>Drop</button>
         <span className="rp-spacer" />
         <button className="chip" onClick={doContinueUnchanged}>Continue unchanged</button>
-        <button className="chip primary" onClick={doContinue}>Continue</button>
+        <button className="chip primary" onClick={doContinue} disabled={statusError}>Continue</button>
       </div>
     </div>
   );

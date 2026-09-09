@@ -1,8 +1,13 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { DetailPane } from "../src/components/DetailPane";
 import { useStore } from "../src/store";
-import type { FlowDetail } from "../src/types";
+import type { FlowDetail, PausedEntry } from "../src/types";
+
+vi.mock("../src/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/api")>();
+  return { ...actual, resumePaused: vi.fn(), dropPaused: vi.fn() };
+});
 
 const detail: FlowDetail = {
   id: "a", timestamp: 1, client: { ip: "1.1.1.1", label: "x" }, method: "GET",
@@ -91,5 +96,32 @@ describe("DetailPane live ws meta", () => {
     useStore.getState().upsertFlow({ ...wsDetail, ws: { messages: 3, open: true, closed_by: null, close_code: null, close_reason: null } });
     render(<DetailPane />);
     expect(screen.getByRole("button", { name: /Messages/i })).toBeInTheDocument();
+  });
+});
+
+describe("DetailPane paused editor keying", () => {
+  const flowA: FlowDetail = {
+    ...detail, id: "pa", response: null, state: "paused_request",
+    request: { headers: [["content-type", "application/json"]], size: 6, body: "A-body" },
+  };
+  const flowB: FlowDetail = {
+    ...detail, id: "pb", response: null, state: "paused_request",
+    request: { headers: [["content-type", "application/json"]], size: 6, body: "B-body" },
+  };
+  const baseEntry: Omit<PausedEntry, "flow"> = {
+    flow_id: "pa", phase: "request", rule_id: "r", since: 0, deadline: Date.now() / 1000 + 45,
+  };
+
+  it("does not leak a previous paused flow's local edits when the selection switches to a different paused flow", async () => {
+    useStore.getState().clear();
+    useStore.getState().addPaused({ ...baseEntry, flow_id: "pa" }, flowA);
+    useStore.getState().addPaused({ ...baseEntry, flow_id: "pb" }, flowB);
+    useStore.getState().select("pa", flowA);
+    render(<DetailPane />);
+    fireEvent.change(screen.getByLabelText(/^body$/i), { target: { value: "EDITED" } });
+    expect(screen.getByLabelText(/^body$/i)).toHaveValue("EDITED");
+
+    useStore.getState().select("pb", flowB);
+    await waitFor(() => expect(screen.getByLabelText(/^body$/i)).toHaveValue("B-body"));
   });
 });
