@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, TYPE_CHECKING
+from typing import Any, Callable, TYPE_CHECKING
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -12,6 +12,7 @@ from proxino.paths import web_dist
 
 if TYPE_CHECKING:
     from .wsstore import WsStore
+    from .breakpoints import BreakpointEngine
 
 class LabelBody(BaseModel):
     label: str
@@ -22,11 +23,26 @@ class ReplayEdit(BaseModel):
     headers: list[tuple[str, str]] | None = None
     body: str | None = None
 
+class BreakpointsBody(BaseModel):
+    enabled: bool = True
+    rules: list[dict] = []
+
+class ResumeBody(BaseModel):
+    method: str | None = None
+    url: str | None = None
+    headers: list[list[str]] | None = None
+    body: str | None = None
+    status: int | None = None
+    reason: str | None = None
+
 def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | None = None,
              edited_replayer: Callable[[str, dict], bool] | None = None,
              passthrough=None,
              wsstore: "WsStore | None" = None,
              on_clear: Callable[[], None] | None = None,
+             breakpoints: "BreakpointEngine | None" = None,
+             resume_paused: Callable[[str, dict], dict | None] | None = None,
+             drop_paused: Callable[[str], dict | None] | None = None,
              web_port: int = 8081, proxy_port: int = 8080) -> FastAPI:
     app = FastAPI(title="Proxino")
 
@@ -138,6 +154,53 @@ def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | Non
             raise HTTPException(status_code=404, detail="not found")
         await broadcaster.publish({"type": "passthrough.update", "hosts": passthrough.snapshot()})
         return {"removed": True}
+
+    @app.get("/api/breakpoints")
+    def get_breakpoints() -> dict:
+        return registry.breakpoints()
+
+    @app.put("/api/breakpoints")
+    async def put_breakpoints(body: BreakpointsBody) -> dict:
+        try:
+            registry.set_breakpoints(body.model_dump())
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        data = registry.breakpoints()
+        await broadcaster.publish({"type": "breakpoints.update", **data})
+        return data
+
+    @app.get("/api/paused")
+    def list_paused() -> list[dict]:
+        if breakpoints is None:
+            return []
+        out = []
+        for entry in breakpoints.paused():
+            flow = store.get(entry["flow_id"])
+            if flow is None:
+                continue
+            out.append({**entry, "flow": flow.model_dump()})
+        return out
+
+    @app.post("/api/paused/{flow_id}/resume")
+    def resume(flow_id: str, body: ResumeBody | None = None) -> dict:
+        if resume_paused is None:
+            raise HTTPException(status_code=503, detail="breakpoints unavailable")
+        edits: dict[str, Any] = {}
+        if body is not None:
+            edits = {k: v for k, v in body.model_dump().items() if v is not None}
+        result = resume_paused(flow_id, edits)
+        if result is None:
+            raise HTTPException(status_code=404, detail="not found")
+        return {"ok": True, "modified": bool(result.get("modified"))}
+
+    @app.post("/api/paused/{flow_id}/drop")
+    def drop(flow_id: str) -> dict:
+        if drop_paused is None:
+            raise HTTPException(status_code=503, detail="breakpoints unavailable")
+        result = drop_paused(flow_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="not found")
+        return {"ok": True}
 
     @app.websocket("/ws")
     async def ws(sock: WebSocket) -> None:

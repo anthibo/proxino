@@ -170,6 +170,42 @@ def test_passthrough_delete_config_host_409(tmp_path):
     # untouched — still listed as a config passthrough host
     assert c.get("/api/passthrough").json()[0]["host"] == "host.pinned.com"
 
+def test_breakpoints_crud_and_validation(tmp_path):
+    c, _, reg = client(tmp_path)
+    assert c.get("/api/breakpoints").json() == {"enabled": True, "rules": []}
+    body = {"enabled": True, "rules": [{"id": "r1", "host": "*.soum.sa", "phase": "request"}]}
+    assert c.put("/api/breakpoints", json=body).json()["rules"][0]["method"] == ""
+    assert reg.breakpoints()["rules"][0]["id"] == "r1"
+    assert c.put("/api/breakpoints", json={"enabled": True, "rules": [{"id": "x", "phase": "bad"}]}).status_code == 422
+
+def test_paused_endpoints(tmp_path):
+    from proxino.breakpoints import BreakpointEngine
+    calls = {}
+    eng = BreakpointEngine(lambda: {"enabled": True, "rules": []})
+    store = FlowStore(); store.add(make_flow(id="p", state="paused_request"))
+    class F:  # minimal flow stand-in for the engine
+        id = "p"; killable = True; is_replay = False
+        def intercept(self): pass
+        def resume(self): pass
+        def kill(self): pass
+    eng.pause(F(), "request", None)
+    def resume(fid, edits):
+        if eng.get(fid) is None:
+            return None
+        calls["resume"] = (fid, edits); return {"flow_id": fid, "modified": bool(edits)}
+    def drop(fid):
+        if eng.get(fid) is None:
+            return None
+        calls["drop"] = fid; return {"flow_id": fid}
+    reg = ClientRegistry(tmp_path / "c.json")
+    c = TestClient(make_app(store, reg, Broadcaster(), breakpoints=eng, resume_paused=resume, drop_paused=drop))
+    lst = c.get("/api/paused").json()
+    assert lst[0]["flow_id"] == "p" and lst[0]["flow"]["id"] == "p" and lst[0]["phase"] == "request"
+    assert c.post("/api/paused/p/resume", json={"headers": [["a", "b"]]}).json() == {"ok": True, "modified": True}
+    assert calls["resume"] == ("p", {"headers": [["a", "b"]]})
+    assert c.post("/api/paused/nope/resume").status_code == 404
+    assert c.post("/api/paused/p/drop").json() == {"ok": True} and calls["drop"] == "p"
+
 def test_ws_messages_endpoint(tmp_path):
     store = FlowStore(); store.add(make_flow(id="w", kind="ws", ws={"messages": 0, "open": True}))
     ws = WsStore(); ws.append("w", True, True, b"hello", 1.0); ws.append("w", False, True, b"world", 2.0)

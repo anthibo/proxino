@@ -83,6 +83,9 @@ class Proxino:
                        passthrough=self.passthrough,
                        wsstore=self.wsstore,
                        on_clear=self.clear,
+                       breakpoints=self.breakpoints,
+                       resume_paused=self.resume_paused,
+                       drop_paused=self.drop_paused,
                        web_port=port, proxy_port=proxy_port)
         config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
         asyncio.ensure_future(uvicorn.Server(config).serve())
