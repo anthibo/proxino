@@ -14,6 +14,9 @@ class Broadcaster:
     def unregister(self, ws: WSLike) -> None:
         self._clients.discard(ws)
 
+    def client_count(self) -> int:
+        return len(self._clients)
+
     async def publish(self, event: dict) -> None:
         dead = []
         for ws in list(self._clients):

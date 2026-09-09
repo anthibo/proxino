@@ -303,3 +303,74 @@ async def test_ws_frames_evicted_with_flow():
         g = tflow.tflow(resp=True); g.client_conn.peername = ("10.0.0.6", 1); addon.response(g)
         await addon._flush_for_test()
     assert addon.wsstore.get(f.id) == ([], 0)
+
+class _WS:
+    async def send_json(self, d): pass
+
+async def test_request_breakpoint_pauses_and_resume_applies_edits(tmp_path, monkeypatch):
+    addon = Proxino()
+    published = []
+    async def fake_publish(evt): published.append(evt)
+    addon.broadcaster.publish = fake_publish
+    await addon.broadcaster.register(_WS())
+    monkeypatch.setattr(addon.registry, "breakpoints", lambda: {"enabled": True, "rules": [{"id": "r", "host": "address", "phase": "request"}]})
+    with taddons.context(addon):
+        f = tflow.tflow(); f.client_conn.peername = ("10.0.0.5", 5000)
+        addon.request(f)
+        await addon._flush_for_test()
+        assert f.intercepted and addon.store.get(f.id).state == "paused_request"
+        assert [e["type"] for e in published][-2:] == ["flow.update", "breakpoint.paused"] or published[-1]["type"] == "breakpoint.paused"
+        out = addon.resume_paused(f.id, {"headers": [["x-edited", "1"]], "body": "hello"})
+        await addon._flush_for_test()
+    assert out["modified"] is True and not f.intercepted
+    assert f.request.headers["x-edited"] == "1" and f.request.content == b"hello"
+    assert addon.store.get(f.id).modified is True and addon.store.get(f.id).state == "pending"
+    assert published[-1]["type"] == "breakpoint.resumed"
+
+async def test_no_pause_without_ui_clients(monkeypatch):
+    addon = Proxino()
+    async def fake_publish(evt): pass
+    addon.broadcaster.publish = fake_publish
+    monkeypatch.setattr(addon.registry, "breakpoints", lambda: {"enabled": True, "rules": [{"id": "r"}]})
+    with taddons.context(addon):
+        f = tflow.tflow(); f.client_conn.peername = ("10.0.0.5", 5000)
+        addon.request(f)
+    assert not f.intercepted
+
+async def test_response_breakpoint_edit_status_and_drop(monkeypatch):
+    addon = Proxino()
+    published = []
+    async def fake_publish(evt): published.append(evt)
+    addon.broadcaster.publish = fake_publish
+    await addon.broadcaster.register(_WS())
+    monkeypatch.setattr(addon.registry, "breakpoints", lambda: {"enabled": True, "rules": [{"id": "r", "phase": "response"}]})
+    with taddons.context(addon):
+        f = tflow.tflow(resp=True); f.client_conn.peername = ("10.0.0.5", 5000)
+        addon.response(f)
+        assert f.intercepted and addon.store.get(f.id).state == "paused_response"
+        out = addon.resume_paused(f.id, {"status": 503, "reason": "Nope", "body": "down"})
+        await addon._flush_for_test()
+    assert f.response.status_code == 503 and f.response.content == b"down" and out["modified"]
+    assert addon.store.get(f.id).state == "complete" and addon.store.get(f.id).response.status == 503
+    with taddons.context(addon):
+        g = tflow.tflow(resp=True); g.client_conn.peername = ("10.0.0.5", 5000)
+        addon.response(g)
+        dropped = addon.drop_paused(g.id)
+        await addon._flush_for_test()
+    assert dropped is not None and published[-1]["type"] == "breakpoint.dropped"
+
+async def test_sweep_publishes_timeout(monkeypatch):
+    addon = Proxino()
+    published = []
+    async def fake_publish(evt): published.append(evt)
+    addon.broadcaster.publish = fake_publish
+    await addon.broadcaster.register(_WS())
+    monkeypatch.setattr(addon.registry, "breakpoints", lambda: {"enabled": True, "rules": [{"id": "r"}]})
+    with taddons.context(addon):
+        f = tflow.tflow(); f.client_conn.peername = ("10.0.0.5", 5000)
+        addon.request(f)
+        addon.breakpoints.timeout_s = 0.0
+        addon._sweep_once()
+        await addon._flush_for_test()
+    assert not f.intercepted and published[-1]["type"] == "breakpoint.timeout"
+    assert addon.store.get(f.id).state == "pending"

@@ -3,7 +3,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel
 
 Header = tuple[str, str]
-FlowState = Literal["pending", "complete", "error"]
+FlowState = Literal["pending", "complete", "error", "paused_request", "paused_response"]
 
 class ClientRef(BaseModel):
     ip: str
@@ -65,6 +65,7 @@ class Flow(BaseModel):
     timing: Timing
     state: FlowState = "pending"
     error: Optional[str] = None
+    modified: bool = False
     kind: FlowKind = "http"
     ws: Optional[WsSummary] = None
 

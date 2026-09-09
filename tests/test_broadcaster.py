@@ -19,3 +19,14 @@ async def test_publish_fans_out_and_drops_dead():
     assert good.sent == [{"type": "flow.new", "flow": {"id": "x"}}]
     await b.publish({"type": "ping"})     # dead one already removed
     assert len(good.sent) == 2
+
+
+@pytest.mark.asyncio
+async def test_client_count():
+    b = Broadcaster()
+    assert b.client_count() == 0
+    ws = FakeWS()
+    await b.register(ws)
+    assert b.client_count() == 1
+    b.unregister(ws)
+    assert b.client_count() == 0
