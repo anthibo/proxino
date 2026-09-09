@@ -9,14 +9,15 @@ import { ReplayModal } from "./ReplayModal";
 
 type Tab = "overview" | "headers" | "body" | "timing";
 
-export function DetailPane() {
+export function DetailPane({ width }: { width?: number } = {}) {
   const detail = useStore((s) => s.detail);
   const [tab, setTab] = useState<Tab>("body");
   const [replayOpen, setReplayOpen] = useState(false);
-  if (!detail) return <div className="detail empty">Select a request</div>;
+  const style = width != null ? { width } : undefined;
+  if (!detail) return <div className="detail empty" style={style}>Select a request</div>;
   const r = detail.response;
   return (
-    <div className="detail">
+    <div className="detail" style={style}>
       <div className="detail-head">
         <span className={"m-badge m-" + detail.method}>{detail.method}</span>
         {r && (

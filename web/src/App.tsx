@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { TopBar } from "./components/TopBar";
 import { FilterBar } from "./components/FilterBar";
 import { ClientsSidebar } from "./components/ClientsSidebar";
@@ -20,6 +20,30 @@ export function App() {
   const setPassthrough = useStore((s) => s.setPassthrough);
   const view = useStore((s) => s.view);
   const isEmpty = useStore((s) => s.flows.size === 0);
+  const detailWidth = useStore((s) => s.detailWidth);
+  const setDetailWidth = useStore((s) => s.setDetailWidth);
+  const dragState = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  const onSplitterMouseDown = useCallback((e: React.MouseEvent) => {
+    dragState.current = { startX: e.clientX, startWidth: useStore.getState().detailWidth };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!dragState.current) return;
+      const delta = dragState.current.startX - ev.clientX;
+      setDetailWidth(dragState.current.startWidth + delta);
+    };
+    const onMouseUp = () => {
+      dragState.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  }, [setDetailWidth]);
+
   useEffect(() => {
     // Running inside the Tauri desktop shell on macOS (seamless title bar) —
     // leave room for the macOS traffic-light buttons in the top bar. Other
@@ -50,7 +74,18 @@ export function App() {
         {view === "inspector" ? (
           <>
             <ClientsSidebar />
-            {isEmpty ? <EmptyState onConnect={() => setShowConnect(true)} /> : <><FlowTable /><DetailPane /></>}
+            {isEmpty ? <EmptyState onConnect={() => setShowConnect(true)} /> : (
+              <>
+                <FlowTable />
+                <div
+                  className="splitter"
+                  role="separator"
+                  aria-orientation="vertical"
+                  onMouseDown={onSplitterMouseDown}
+                />
+                <DetailPane width={detailWidth} />
+              </>
+            )}
           </>
         ) : view === "devices" ? (
           <DevicesView onConnect={() => setShowConnect(true)} />

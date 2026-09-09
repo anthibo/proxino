@@ -247,8 +247,8 @@ html, body, #root {
 
 /* Detail pane */
 .detail {
-  width: 340px;
   flex-shrink: 0;
+  min-width: 0;
   background: var(--panel);
   border-left: 1px solid var(--border);
   overflow-y: auto;
@@ -256,6 +256,18 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* Splitter: drag handle between the flow table and the detail pane */
+.splitter {
+  width: 6px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+}
+
+.splitter:hover {
+  background: color-mix(in srgb, var(--brand) 40%, transparent);
 }
 
 .detail.empty {
@@ -664,8 +676,9 @@ html, body, #root {
 .detail-head { display: flex; align-items: center; gap: 8px; padding: 15px 16px 9px; flex-wrap: wrap; }
 .detail-url { padding: 0 16px 13px; border: none; font-size: 12.5px; color: var(--text);
   font-family: "JetBrains Mono", ui-monospace, monospace; word-break: break-all;
+  overflow-wrap: anywhere; flex-wrap: wrap;
   border-bottom: 1px solid var(--border); }
-.detail-actions { display: flex; gap: 8px; padding: 12px 16px; }
+.detail-actions { display: flex; gap: 8px; padding: 12px 16px; flex-wrap: wrap; }
 
 .m-badge, .s-badge {
   display: inline-flex; align-items: center;
@@ -685,7 +698,7 @@ html, body, #root {
 .s-5 { color: var(--err5xx); background: #2E1619; }
 
 /* JSON toolbar + segmented pill polish */
-.jv-toolbar { padding: 9px 12px; gap: 8px; background: var(--panel); }
+.jv-toolbar { padding: 9px 12px; gap: 8px; background: var(--panel); flex-wrap: wrap; }
 .jv-toolbar .chip { padding: 5px 10px; font-size: 11.5px; }
 .seg { border-radius: 8px; padding: 2px; gap: 2px; background: var(--chip); border-color: var(--border); overflow: visible; }
 .seg-item { border-radius: 6px; padding: 5px 13px; background: transparent; font-weight: 500; font-size: 12px; }

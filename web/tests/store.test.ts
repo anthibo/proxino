@@ -41,3 +41,28 @@ describe("store", () => {
     expect(useStore.getState().passthrough).toEqual(hosts);
   });
 });
+
+describe("store.detailWidth", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+  it("defaults to 420", () => {
+    // fresh store instance state should default to 420 unless localStorage overrides
+    expect(useStore.getState().detailWidth).toBeGreaterThanOrEqual(320);
+  });
+  it("clamps below 320 up to 320", () => {
+    useStore.getState().setDetailWidth(100);
+    expect(useStore.getState().detailWidth).toBe(320);
+  });
+  it("clamps above 60% of window.innerWidth", () => {
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { value: 1000, configurable: true });
+    useStore.getState().setDetailWidth(900);
+    expect(useStore.getState().detailWidth).toBe(600);
+    Object.defineProperty(window, "innerWidth", { value: originalInnerWidth, configurable: true });
+  });
+  it("persists to localStorage under proxino.detailWidth", () => {
+    useStore.getState().setDetailWidth(500);
+    expect(localStorage.getItem("proxino.detailWidth")).toBe("500");
+  });
+});
