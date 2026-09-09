@@ -10,6 +10,7 @@ from proxino.store import FlowStore
 from proxino.clients import ClientRegistry
 from proxino.broadcaster import Broadcaster
 from proxino.transform import flow_to_record
+from proxino.passthrough import PassthroughRegistry
 
 _log = logging.getLogger("proxino")
 
@@ -18,6 +19,7 @@ class Proxino:
         self.store = FlowStore()
         self.registry = ClientRegistry(Path.home() / ".proxino" / "config.json")
         self.broadcaster = Broadcaster()
+        self.passthrough = PassthroughRegistry(patterns=self.registry.passthrough_patterns())
         self._mflows: OrderedDict[str, HTTPFlow] = OrderedDict()
         self._mflow_cap = 5000
 
@@ -31,6 +33,7 @@ class Proxino:
         proxy_port = ctx.options.listen_port or 8080
         app = make_app(self.store, self.registry, self.broadcaster,
                        replayer=self.replay, edited_replayer=self.replay_edited,
+                       passthrough=self.passthrough,
                        web_port=port, proxy_port=proxy_port)
         config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
         asyncio.ensure_future(uvicorn.Server(config).serve())
@@ -39,6 +42,12 @@ class Proxino:
         if not os.environ.get("PROXINO_NO_BROWSER"):
             webbrowser.open(f"http://127.0.0.1:{port}")
 
+    def _publish(self, evt: dict) -> None:
+        fut = asyncio.ensure_future(self.broadcaster.publish(evt))
+        fut.add_done_callback(
+            lambda f: f.exception() and _log.error("proxino publish failed: %r", f.exception())
+        )
+
     def _emit(self, evt_type: str, flow: HTTPFlow) -> None:
         rec = flow_to_record(flow, self.registry)
         self.store.add(rec)
@@ -46,11 +55,26 @@ class Proxino:
         self._mflows.move_to_end(flow.id)
         while len(self._mflows) > self._mflow_cap:
             self._mflows.popitem(last=False)
-        evt = {"type": evt_type, "flow": rec.meta()}
-        fut = asyncio.ensure_future(self.broadcaster.publish(evt))
-        fut.add_done_callback(
-            lambda f: f.exception() and _log.error("proxino publish failed: %r", f.exception())
-        )
+        self._publish({"type": evt_type, "flow": rec.meta()})
+
+    def tls_clienthello(self, data) -> None:
+        if self.passthrough.should_ignore(data.context.client.sni):
+            data.ignore_connection = True
+
+    def tls_failed_client(self, data) -> None:
+        host = data.context.client.sni
+        if host is None:
+            return
+        client_ip = data.context.client.peername[0]
+        flipped = self.passthrough.record_failure(host, client_ip)
+        hosts = self.passthrough.snapshot()
+        if flipped:
+            failures = next((h["failures"] for h in hosts if h["host"] == host), 0)
+            _log.info(
+                "proxino: passing through %s (client %s refused the proxy certificate %d times)",
+                host, client_ip, failures,
+            )
+        self._publish({"type": "passthrough.update", "hosts": hosts})
 
     def request(self, flow: HTTPFlow) -> None:
         # Stream a pending row the moment a request starts, so in-flight and

@@ -21,6 +21,7 @@ class ReplayEdit(BaseModel):
 
 def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | None = None,
              edited_replayer: Callable[[str, dict], bool] | None = None,
+             passthrough=None,
              web_port: int = 8081, proxy_port: int = 8080) -> FastAPI:
     app = FastAPI(title="Proxino")
 
@@ -102,6 +103,17 @@ def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | Non
         if not edited_replayer(flow_id, edits):
             raise HTTPException(status_code=404, detail="not found")
         return {"ok": True}
+
+    @app.get("/api/passthrough")
+    def list_passthrough() -> list[dict]:
+        return passthrough.snapshot() if passthrough is not None else []
+
+    @app.delete("/api/passthrough/{host}")
+    async def remove_passthrough(host: str) -> dict:
+        if passthrough is None or not passthrough.remove(host):
+            raise HTTPException(status_code=404, detail="not found")
+        await broadcaster.publish({"type": "passthrough.update", "hosts": passthrough.snapshot()})
+        return {"removed": True}
 
     @app.websocket("/ws")
     async def ws(sock: WebSocket) -> None:

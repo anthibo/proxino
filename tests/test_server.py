@@ -103,3 +103,37 @@ def test_replay_edited_drops_none_fields(tmp_path):
 def test_replay_edited_503_without_replayer(tmp_path):
     c, _, _ = client(tmp_path)
     assert c.post("/api/flows/a/replay-edited", json={}).status_code == 503
+
+def test_passthrough_empty_list_without_registry(tmp_path):
+    c, _, _ = client(tmp_path)   # make_app built without a passthrough registry
+    assert c.get("/api/passthrough").json() == []
+
+def test_passthrough_snapshot_endpoint(tmp_path):
+    from proxino.passthrough import PassthroughRegistry
+    pth = PassthroughRegistry(threshold=1)
+    pth.record_failure("pinned.example.com", "1.2.3.4")
+    c = TestClient(make_app(FlowStore(), ClientRegistry(tmp_path / "c.json"), Broadcaster(),
+                            passthrough=pth))
+    hosts = c.get("/api/passthrough").json()
+    assert hosts[0]["host"] == "pinned.example.com"
+
+def test_passthrough_delete_removes_and_publishes(tmp_path):
+    from proxino.passthrough import PassthroughRegistry
+    pth = PassthroughRegistry(threshold=1)
+    pth.record_failure("pinned.example.com", "1.2.3.4")
+    published = []
+    bc = Broadcaster()
+    async def fake_publish(evt): published.append(evt)
+    bc.publish = fake_publish
+    c = TestClient(make_app(FlowStore(), ClientRegistry(tmp_path / "c.json"), bc, passthrough=pth))
+    r = c.delete("/api/passthrough/pinned.example.com")
+    assert r.json() == {"removed": True}
+    assert c.get("/api/passthrough").json() == []
+    assert published[-1]["type"] == "passthrough.update"
+
+def test_passthrough_delete_unknown_host_404(tmp_path):
+    from proxino.passthrough import PassthroughRegistry
+    pth = PassthroughRegistry()
+    c = TestClient(make_app(FlowStore(), ClientRegistry(tmp_path / "c.json"), Broadcaster(),
+                            passthrough=pth))
+    assert c.delete("/api/passthrough/nope.example.com").status_code == 404

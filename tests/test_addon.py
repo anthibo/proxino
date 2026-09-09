@@ -1,5 +1,18 @@
+from types import SimpleNamespace
 from mitmproxy.test import taddons, tflow
 from proxino.addon import Proxino
+
+
+def _hello_data(sni, ignore=False, ip="9.8.7.6"):
+    client = SimpleNamespace(sni=sni, peername=(ip, 1))
+    context = SimpleNamespace(client=client)
+    return SimpleNamespace(context=context, ignore_connection=ignore)
+
+
+def _tls_failed_data(sni, ip="9.8.7.6"):
+    client = SimpleNamespace(sni=sni, peername=(ip, 1))
+    context = SimpleNamespace(client=client)
+    return SimpleNamespace(context=context)
 
 async def test_response_hook_records_and_publishes():
     addon = Proxino()
@@ -94,6 +107,51 @@ async def test_replay_edited_applies_edits_to_a_clone():
         assert clone.request.text == "hello"
         assert clone.response is None
         assert f.request.method == "GET"            # original untouched
+
+async def test_tls_clienthello_ignores_only_when_should_ignore():
+    addon = Proxino()
+    with taddons.context(addon):
+        data = _hello_data("plain.example.com")
+        addon.tls_clienthello(data)
+        assert data.ignore_connection is False
+
+        addon.passthrough._auto.add("pinned.example.com")
+        data2 = _hello_data("pinned.example.com")
+        addon.tls_clienthello(data2)
+        assert data2.ignore_connection is True
+
+
+async def test_tls_failed_client_flips_after_threshold_and_publishes():
+    addon = Proxino()
+    published = []
+    async def fake_publish(evt): published.append(evt)
+    addon.broadcaster.publish = fake_publish
+    with taddons.context(addon):
+        data = _tls_failed_data("pinned.example.com", ip="1.2.3.4")
+        addon.tls_failed_client(data)
+        await addon._flush_for_test()
+        assert published[-1]["type"] == "passthrough.update"
+        assert published[-1]["hosts"][0]["host"] == "pinned.example.com"
+        assert published[-1]["hosts"][0]["failures"] == 1
+        assert addon.passthrough.should_ignore("pinned.example.com") is False
+
+        addon.tls_failed_client(data)
+        await addon._flush_for_test()
+        assert addon.passthrough.should_ignore("pinned.example.com") is True
+        assert published[-1]["hosts"][0]["failures"] == 2
+
+
+async def test_tls_failed_client_with_no_sni_is_noop():
+    addon = Proxino()
+    published = []
+    async def fake_publish(evt): published.append(evt)
+    addon.broadcaster.publish = fake_publish
+    with taddons.context(addon):
+        data = _tls_failed_data(None)
+        addon.tls_failed_client(data)
+        await addon._flush_for_test()
+        assert published == []
+
 
 async def test_mflow_map_evicts_with_capacity():
     addon = Proxino()
