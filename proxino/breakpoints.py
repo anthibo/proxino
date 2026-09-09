@@ -46,3 +46,91 @@ def match_rule(rules: list[BreakpointRule], *, host: str, path: str, method: str
         if r.matches(host=host, path=path, method=method, phase=phase):
             return r
     return None
+
+
+import time
+from typing import Callable
+
+
+class BreakpointEngine:
+    def __init__(self, rules_provider: Callable[[], dict], timeout_s: float = 60.0,
+                 now: Callable[[], float] = time.monotonic, wall: Callable[[], float] = time.time) -> None:
+        self._rules_provider = rules_provider
+        self.timeout_s = timeout_s
+        self._now = now; self._wall = wall
+        self._paused: dict[str, dict] = {}
+
+    def _rules(self) -> tuple[bool, list[BreakpointRule]]:
+        data = self._rules_provider() or {}
+        rules = []
+        for r in data.get("rules", []):
+            try:
+                rules.append(BreakpointRule.from_dict(r))
+            except ValueError:
+                continue
+        return bool(data.get("enabled", True)), rules
+
+    def should_pause(self, flow, phase: str, has_clients: bool) -> BreakpointRule | None:
+        if not has_clients or getattr(flow, "is_replay", False):
+            return None
+        enabled, rules = self._rules()
+        if not enabled:
+            return None
+        req = getattr(flow, "request", None)
+        if req is None:
+            return None
+        path = req.path.split("?", 1)[0]
+        return match_rule(rules, host=req.host, path=path, method=req.method, phase=phase)
+
+    @staticmethod
+    def public(entry: dict) -> dict:
+        return {k: v for k, v in entry.items() if not k.startswith("_")}
+
+    def pause(self, flow, phase: str, rule: BreakpointRule | None) -> dict:
+        flow.intercept()
+        since = self._wall()
+        entry = {"flow_id": flow.id, "phase": phase, "rule_id": rule.id if rule else None,
+                 "since": since, "deadline": since + self.timeout_s, "_flow": flow}
+        self._paused[flow.id] = entry
+        return self.public(entry)
+
+    def get(self, flow_id: str) -> dict | None:
+        e = self._paused.get(flow_id)
+        return self.public(e) if e else None
+
+    def paused(self) -> list[dict]:
+        return [self.public(e) for e in self._paused.values()]
+
+    def flow(self, flow_id: str):
+        e = self._paused.get(flow_id)
+        return e["_flow"] if e else None
+
+    def resume(self, flow_id: str) -> dict | None:
+        e = self._paused.pop(flow_id, None)
+        if e is None:
+            return None
+        e["_flow"].resume()
+        return self.public(e)
+
+    def drop(self, flow_id: str) -> dict | None:
+        e = self._paused.pop(flow_id, None)
+        if e is None:
+            return None
+        f = e["_flow"]
+        killed = False
+        if getattr(f, "killable", False):
+            f.kill(); killed = True
+        else:
+            f.resume()
+        out = self.public(e); out["killed"] = killed
+        return out
+
+    def sweep(self) -> list[dict]:
+        now = self._wall()
+        stale = [fid for fid, e in self._paused.items() if e["deadline"] <= now]
+        out = []
+        for fid in stale:
+            e = self.resume(fid)
+            if e:
+                out.append(e)
+        return out
