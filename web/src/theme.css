@@ -764,6 +764,14 @@ html, body, #root {
 .rp-err { color: var(--err5xx); font-size: 12px; font-weight: 600; }
 .rp-ok { color: var(--ok); font-size: 12px; font-weight: 600; }
 
+/* Paused group (FlowTable) + inline breakpoint editor (DetailPane) */
+.paused-group-head { position: sticky; top: 0; background: #1a1410; color: var(--post); font-size: 11px; letter-spacing: .06em; padding: 4px 12px; }
+.p-badge { background: rgba(251,191,36,.15); color: var(--post); border-radius: 5px; padding: 1px 6px; font-size: 10px; font-weight: 700; }
+.paused-editor { display:flex; flex-direction:column; gap:10px; }
+.countdown { color: var(--muted); font-size: 12px; }
+.pe-head { display: flex; align-items: center; gap: 8px; }
+.pe-title { font-weight: 600; font-size: 13px; }
+
 /* BreakpointsModal */
 .bp-modal { max-width: 640px; }
 .bp-enabled { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; margin-bottom: 14px; }

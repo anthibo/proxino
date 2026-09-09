@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import type { FlowDetail } from "../types";
 import { replayEdited } from "../api";
-
-interface Row { on: boolean; key: string; val: string; }
+import { HeaderRowsEditor, type Row } from "./HeaderRowsEditor";
 
 const shq = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 function editedCurl(method: string, url: string, headers: [string, string][], body: string): string {
@@ -24,11 +23,6 @@ export function ReplayModal({ detail, onClose }: { detail: FlowDetail; onClose: 
 
   const headers = useMemo<[string, string][]>(
     () => rows.filter((r) => r.on && r.key).map((r) => [r.key, r.val]), [rows]);
-
-  const patch = (i: number, p: Partial<Row>) =>
-    setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...p } : r)));
-  const addRow = () => setRows((rs) => [...rs, { on: true, key: "", val: "" }]);
-  const removeRow = (i: number) => setRows((rs) => rs.filter((_, j) => j !== i));
 
   const send = async () => {
     setStatus("sending");
@@ -55,18 +49,7 @@ export function ReplayModal({ detail, onClose }: { detail: FlowDetail; onClose: 
         </div>
 
         <div className="rp-section">Headers</div>
-        <div className="rp-headers">
-          {rows.map((r, i) => (
-            <div key={i} className={"rp-hrow" + (r.on ? "" : " off")}>
-              <input type="checkbox" checked={r.on} onChange={(e) => patch(i, { on: e.target.checked })}
-                     aria-label={`include ${r.key}`} />
-              <input className="rp-hkey" value={r.key} placeholder="Header" onChange={(e) => patch(i, { key: e.target.value })} spellCheck={false} />
-              <input className="rp-hval" value={r.val} placeholder="value" onChange={(e) => patch(i, { val: e.target.value })} spellCheck={false} />
-              <button className="rp-hdel" aria-label="remove header" onClick={() => removeRow(i)}>✕</button>
-            </div>
-          ))}
-          <button className="rp-hadd" onClick={addRow}>＋ Add header</button>
-        </div>
+        <HeaderRowsEditor rows={rows} onChange={setRows} />
 
         <div className="rp-section">Body</div>
         <textarea className="rp-body" value={body} placeholder="(no body)"

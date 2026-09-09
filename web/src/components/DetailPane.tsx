@@ -7,6 +7,7 @@ import { JsonView } from "./JsonView";
 import { Timing } from "./Timing";
 import { ReplayModal } from "./ReplayModal";
 import { WsMessages } from "./WsMessages";
+import { PausedEditor } from "./PausedEditor";
 
 type Tab = "overview" | "headers" | "body" | "messages" | "timing";
 
@@ -38,8 +39,10 @@ export function DetailPane({ width }: { width?: number } = {}) {
     setTab(isWs ? "messages" : "body");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail?.id]);
+  const pausedEntry = useStore((s) => (detail ? s.paused[detail.id] : undefined));
   const style = width != null ? { width } : undefined;
   if (!detail) return <div className="detail empty" style={style}>Select a request</div>;
+  if (pausedEntry) return <div className="detail" style={style}><PausedEditor entry={pausedEntry} /></div>;
   const r = detail.response;
   const tabs: Tab[] = isWs ? ["overview", "headers", "messages", "timing"] : ["overview", "headers", "body", "timing"];
   return (

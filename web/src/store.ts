@@ -54,6 +54,7 @@ interface State {
   clear: () => void;
   visibleFlows: () => FlowMeta[];
   allFlows: () => FlowMeta[];
+  pausedFlows: () => FlowDetail[];
 }
 
 export const useStore = create<State>((set, get) => ({
@@ -118,5 +119,11 @@ export const useStore = create<State>((set, get) => ({
   allFlows: () => {
     const s = get();
     return s.order.map((id) => s.flows.get(id)!).reverse();
+  },
+  pausedFlows: () => {
+    const s = get();
+    return Object.values(s.paused)
+      .sort((a, b) => b.since - a.since)
+      .map((e) => e.flow);
   },
 }));

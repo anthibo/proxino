@@ -47,3 +47,26 @@ test("ws row shows ws type badge, live dot and message count", () => {
   expect(screen.getByText("12 msgs")).toBeInTheDocument();
   expect(document.querySelector(".ws-live")).not.toBeNull();
 });
+
+test("paused group renders above live rows with a PAUSED badge", () => {
+  useStore.setState({ paused: {} });
+  useStore.getState().clear();
+  useStore.getState().upsertFlow(mk("live1", { path: "/v2/live" }));
+  const pausedDetail: any = {
+    id: "paused1", timestamp: 2, client: { ip: "1.1.1.1", label: "x" }, method: "POST",
+    scheme: "https", host: "api.soum.sa", port: 443, path: "/v2/paused", query: "", http_version: "HTTP/2",
+    request: { headers: [], size: 0, body: null }, response: null, duration_ms: null,
+    state: "paused_request", error: null, timing: {},
+  };
+  useStore.getState().addPaused({ flow_id: "paused1", phase: "request", rule_id: null, since: 1, deadline: 2 }, pausedDetail);
+  render(<FlowTable />);
+  expect(screen.getByText("Paused (1)")).toBeInTheDocument();
+  expect(screen.getByText("PAUSED")).toBeInTheDocument();
+  const rows = Array.from(document.querySelectorAll(".flowrow"));
+  const pausedIdx = rows.findIndex((r) => r.textContent?.includes("/v2/paused"));
+  const liveIdx = rows.findIndex((r) => r.textContent?.includes("/v2/live"));
+  expect(pausedIdx).toBeGreaterThanOrEqual(0);
+  expect(liveIdx).toBeGreaterThanOrEqual(0);
+  expect(pausedIdx).toBeLessThan(liveIdx);
+  useStore.setState({ paused: {} });
+});
