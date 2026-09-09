@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "proxino"
-version = "0.1.3"
+version = "0.2.0"
 description = "Self-hosted network inspector for mobile HTTPS — a free, open alternative to Proxyman/Charles"
 readme = "README.md"
 license = { file = "LICENSE" }

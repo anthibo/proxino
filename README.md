@@ -57,6 +57,7 @@ The commercial inspectors are excellent tools, and if you need breakpoints, map-
 
 - **Live capture** of HTTP/HTTPS flows, streamed to the browser over WebSocket.
 - **WebSocket frames** — each connection is a live row; the Messages tab streams frames with direction, size, and JSON/MsgPack/Protobuf previews.
+- **Breakpoints** — pause matching requests or responses, edit headers, body, status, then continue or drop; rules live in the Breakpoints dialog and `~/.proxino/config.json`; a paused flow auto-continues after 60 s and nothing pauses while no UI is connected.
 - **Per‑device grouping** — clients are auto‑named from the User‑Agent (iPhone, Android app, Mac…) with per‑device request counts; rename any device inline.
 - **Filter DSL** — `status:>=400 host:*.example.com path:/v2/*`, plus `type:ws` for WebSocket flows, with autocomplete, quick method chips (All/GET/POST/4xx/5xx), an "Errors only" toggle, and saved filters.
 - **Rich response viewer** — collapsible syntax‑highlighted JSON, HTML/XML highlighting with a rendered Preview, line numbers, content‑type badge, and an error banner for 4xx/5xx — and decoded views for Protobuf/gRPC (schema-less), MsgPack, multipart and form bodies; request bodies shown alongside responses.
@@ -106,6 +107,12 @@ Some apps pin certificates (Instagram, Facebook, the iOS App Store/iCloud) and w
 
 ---
 
+## Breakpoints
+
+Open **Breakpoints** in the top bar to add a rule matching a host, path, method, and phase (request or response). When a request or response matches, it pauses in a **Paused** group at the top of the table — select it to open the inline editor and modify headers, body, or status. Press ⌘↵ to **Continue** or ⌘⌫ to **Drop** the paused flow; if no action is taken within 60 s, it auto-continues. Nothing pauses while no UI client is connected.
+
+---
+
 ## Development
 
 ```bash
@@ -150,7 +157,6 @@ docs/           documentation
 
 ## Roadmap
 
-- Breakpoints / intercept-and-edit before forwarding
 - Find-in-body search, copy-all-as-cURL
 - Signed and notarized desktop builds, Intel macOS build, Homebrew tap
 - Client-side scripting hooks
