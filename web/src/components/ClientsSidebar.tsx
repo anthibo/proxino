@@ -4,18 +4,7 @@ import { useShallow } from "zustand/react/shallow";
 import { deriveClients } from "../clients";
 import { setClientLabel, removePassthrough, fetchPassthrough } from "../api";
 import { DeviceIcon } from "./DeviceIcon";
-
-/** Small monochrome lock-open glyph — a host that refused our cert and is
- * being forwarded encrypted instead of intercepted. */
-function LockOpenIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="5" y="11" width="14" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 7.5-2" />
-    </svg>
-  );
-}
+import { LockOpenIcon } from "./LockOpenIcon";
 
 export function ClientsSidebar() {
   const flows = useStore(useShallow((s) => s.allFlows()));
@@ -26,16 +15,24 @@ export function ClientsSidebar() {
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [retryErrors, setRetryErrors] = useState<Record<string, string>>({});
   const cancelRef = useRef(false);
   const commit = (ip: string) => { setClientLabel(ip, draft).catch(() => {}); setLabels((m) => ({ ...m, [ip]: draft })); setEditing(null); };
   const retry = (host: string) => {
+    setRetryErrors((m) => { const { [host]: _drop, ...rest } = m; return rest; });
     removePassthrough(host)
       .then(() => fetchPassthrough())
       .then(setPassthrough)
-      .catch(() => {});
+      .catch(() => {
+        // Keep the row and surface a short inline error — a config-managed
+        // host (409) or a race with another client (404) both land here,
+        // and silently swallowing it would hide a Retry that never worked.
+        setRetryErrors((m) => ({ ...m, [host]: "Couldn't remove — try again" }));
+      });
   };
   const clients = deriveClients(flows, labels);
   const total = clients.reduce((n, c) => n + c.count, 0);
+  const activePassthroughCount = passthrough.filter((p) => p.active).length;
   return (
     <div className="sidebar">
       <div className="side-head"><span>CLIENTS</span><span className="side-count">{clients.length}</span></div>
@@ -77,17 +74,28 @@ export function ClientsSidebar() {
       ))}
       {passthrough.length > 0 && (
         <>
-          <div className="side-head"><span>PASSTHROUGH</span><span className="side-count">{passthrough.length}</span></div>
-          {passthrough.map((p) => (
-            <div key={p.host} className="pth-row">
-              <span className="pth-ico"><LockOpenIcon /></span>
-              <span className="pth-main">
-                <span className="pth-name">{p.host}</span>
-                <span className="pth-sub">{p.source === "config" ? "config" : `pinned · ${p.failures} refused`}</span>
-              </span>
-              <button className="chip pth-retry" onClick={() => retry(p.host)}>Retry</button>
-            </div>
-          ))}
+          <div className="side-head"><span>PASSTHROUGH</span><span className="side-count">{activePassthroughCount}</span></div>
+          {passthrough.map((p) => {
+            const watching = !p.active;
+            const subText = watching ? `watching · ${p.failures} refused`
+              : p.source === "config" ? "config" : `pinned · ${p.failures} refused`;
+            const canRetry = p.source !== "config" && !watching;
+            return (
+              <div key={p.host} className="pth-row">
+                <span className="pth-ico"><LockOpenIcon /></span>
+                <span className="pth-main">
+                  <span className="pth-name">{p.host}</span>
+                  <span className="pth-sub">{subText}</span>
+                  {retryErrors[p.host] && <span className="pth-err">{retryErrors[p.host]}</span>}
+                </span>
+                {canRetry ? (
+                  <button className="chip pth-retry" onClick={() => retry(p.host)}>Retry</button>
+                ) : p.source === "config" ? (
+                  <span className="chip pth-tag">config</span>
+                ) : null}
+              </div>
+            );
+          })}
         </>
       )}
     </div>

@@ -842,6 +842,8 @@ html, body, #root {
 .pth-sub { font-size: 11px; color: var(--muted); font-family: "JetBrains Mono", ui-monospace, monospace;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pth-retry { padding: 4px 9px; font-size: 11px; }
+.pth-tag { padding: 4px 9px; font-size: 11px; color: var(--muted); cursor: default; }
+.pth-err { font-size: 10.5px; color: var(--err4xx); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tb-passthrough { color: var(--sec); }
 
 /* ---- Flow table: header + 8 columns (dot method status host path type size time) ---- */

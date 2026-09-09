@@ -9,11 +9,13 @@ class PassthroughRegistry:
     or because they were pre-listed in config (config)."""
 
     def __init__(self, patterns: list[str] = (), threshold: int = 2,
-                 window_s: float = 60.0, now=time.monotonic) -> None:
+                 window_s: float = 60.0, now=time.monotonic,
+                 wall=time.time) -> None:
         self._patterns = list(patterns)
         self._threshold = threshold
         self._window_s = window_s
         self._now = now
+        self._wall = wall
         # host -> list of (monotonic_ts, client_ip)
         self._failures: dict[str, list[tuple[float, str]]] = {}
         self._auto: set[str] = set()
@@ -23,7 +25,7 @@ class PassthroughRegistry:
         self._config_seen: set[str] = set()
 
     def _touch(self, host: str, client_ip: str | None) -> None:
-        wall = time.time()
+        wall = self._wall()
         entry = self._entries.setdefault(host, {
             "failures": 0, "clients": set(), "first_seen": wall, "last_seen": wall,
         })
@@ -49,36 +51,51 @@ class PassthroughRegistry:
         low = host.lower()
         return any(fnmatch(low, p.lower()) for p in self._patterns)
 
-    def should_ignore(self, host: str | None) -> bool:
+    def should_ignore(self, host: str | None, client_ip: str | None = None) -> bool:
         if host is None:
             return False
         if host in self._auto:
             return True
         if self._matches_pattern(host):
             self._config_seen.add(host)
-            self._touch(host, None)
+            self._touch(host, client_ip)
             return True
         return False
 
     def remove(self, host: str) -> bool:
-        was_active = host in self._auto
+        """Drop an auto-flipped host so the next hello is intercepted again.
+
+        Config-sourced hosts re-match their pattern on every hello, so
+        "removing" them here would be a no-op that just resets their
+        counters — refuse instead, so callers (the API) can tell the
+        difference and the UI can hide a Retry action that can't work.
+        """
+        if host not in self._auto:
+            return False
         self._auto.discard(host)
         self._failures.pop(host, None)
         self._entries.pop(host, None)
         self._config_seen.discard(host)
-        return was_active
+        return True
 
     def snapshot(self) -> list[dict]:
         out = []
         for host, entry in self._entries.items():
-            source = "config" if host in self._config_seen else "auto"
+            is_config = host in self._config_seen
+            source = "config" if is_config else "auto"
+            # Config hosts are always actively passed through. Auto hosts
+            # are only "active" once they've flipped past the failure
+            # threshold — below that they're merely "watching" (still being
+            # intercepted while their refusal count builds up).
+            active = True if is_config else host in self._auto
             out.append({
                 "host": host,
                 "source": source,
+                "active": active,
                 "failures": entry["failures"],
                 "clients": sorted(entry["clients"]),
                 "first_seen": entry["first_seen"],
                 "last_seen": entry["last_seen"],
             })
-        out.sort(key=lambda e: e["last_seen"], reverse=True)
+        out.sort(key=lambda e: (not e["active"], -e["last_seen"]))
         return out

@@ -153,6 +153,57 @@ async def test_tls_failed_client_with_no_sni_is_noop():
         assert published == []
 
 
+async def test_tls_failed_client_peername_none_records_unknown():
+    # mitmproxy can hand us a client_conn with no peername yet (e.g. very
+    # early failure). Must not raise, and should record the client as
+    # "unknown" rather than crashing the hook.
+    addon = Proxino()
+    published = []
+    async def fake_publish(evt): published.append(evt)
+    addon.broadcaster.publish = fake_publish
+    with taddons.context(addon):
+        client = SimpleNamespace(sni="host.example.com", peername=None)
+        data = SimpleNamespace(context=SimpleNamespace(client=client))
+        addon.tls_failed_client(data)
+        await addon._flush_for_test()
+        assert published[-1]["hosts"][0]["clients"] == ["unknown"]
+
+
+async def test_tls_failed_client_missing_client_does_not_raise():
+    # A hook exception in mitmproxy kills the connection outright, so a
+    # malformed/partial `data.context` must be swallowed, not raised.
+    addon = Proxino()
+    published = []
+    async def fake_publish(evt): published.append(evt)
+    addon.broadcaster.publish = fake_publish
+    with taddons.context(addon):
+        data = SimpleNamespace(context=SimpleNamespace())  # no .client at all
+        addon.tls_failed_client(data)  # must not raise
+        await addon._flush_for_test()
+        assert published == []
+
+
+async def test_tls_clienthello_missing_client_does_not_raise():
+    addon = Proxino()
+    with taddons.context(addon):
+        data = SimpleNamespace(context=SimpleNamespace())  # no .client at all
+        addon.tls_clienthello(data)  # must not raise
+        assert not hasattr(data, "ignore_connection") or data.ignore_connection is False
+
+
+async def test_tls_clienthello_passes_client_ip_for_config_hosts():
+    # Config-sourced entries should get real `clients`, not an empty list —
+    # tls_clienthello must forward the peer IP into should_ignore().
+    addon = Proxino()
+    addon.passthrough._patterns.append("pinned.example.com")
+    with taddons.context(addon):
+        data = _hello_data("pinned.example.com", ip="7.7.7.7")
+        addon.tls_clienthello(data)
+        assert data.ignore_connection is True
+        snap = {e["host"]: e for e in addon.passthrough.snapshot()}
+        assert snap["pinned.example.com"]["clients"] == ["7.7.7.7"]
+
+
 async def test_mflow_map_evicts_with_capacity():
     addon = Proxino()
     addon.store.capacity = 2

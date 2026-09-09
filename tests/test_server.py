@@ -137,3 +137,18 @@ def test_passthrough_delete_unknown_host_404(tmp_path):
     c = TestClient(make_app(FlowStore(), ClientRegistry(tmp_path / "c.json"), Broadcaster(),
                             passthrough=pth))
     assert c.delete("/api/passthrough/nope.example.com").status_code == 404
+
+def test_passthrough_delete_config_host_409(tmp_path):
+    # Config-sourced hosts re-match their pattern on the very next hello, so
+    # "retry decrypt" can't apply to them — the API must say so explicitly
+    # instead of pretending the removal worked (or 404-ing as if unknown).
+    from proxino.passthrough import PassthroughRegistry
+    pth = PassthroughRegistry(patterns=["*.pinned.com"])
+    pth.should_ignore("host.pinned.com")
+    c = TestClient(make_app(FlowStore(), ClientRegistry(tmp_path / "c.json"), Broadcaster(),
+                            passthrough=pth))
+    r = c.delete("/api/passthrough/host.pinned.com")
+    assert r.status_code == 409
+    assert "config.json" in r.json()["detail"]
+    # untouched — still listed as a config passthrough host
+    assert c.get("/api/passthrough").json()[0]["host"] == "host.pinned.com"

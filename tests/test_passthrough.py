@@ -54,12 +54,34 @@ def test_remove_unknown_host_returns_false():
     assert reg.remove("nope.example.com") is False
 
 
+def test_remove_config_host_returns_false_and_keeps_entry():
+    # Config-sourced hosts re-match on the next hello, so "retry decrypt"
+    # cannot meaningfully apply to them — remove() must refuse and must be
+    # a true no-op (not silently reset the entry's counters).
+    reg = PassthroughRegistry(patterns=["*.pinned.com"])
+    reg.should_ignore("host.pinned.com")
+    reg.should_ignore("host.pinned.com")
+    before = {e["host"]: e for e in reg.snapshot()}["host.pinned.com"]
+    assert reg.remove("host.pinned.com") is False
+    after = {e["host"]: e for e in reg.snapshot()}["host.pinned.com"]
+    assert after["source"] == "config"
+    # a real no-op: counters weren't reset by the failed remove
+    assert after["failures"] == before["failures"] == 2
+    assert after["first_seen"] == before["first_seen"]
+
+
 def test_snapshot_shape_and_ordering():
+    # Two independently-injectable clocks: `now` (monotonic) drives the
+    # sliding-failure-window math, `wall` drives first_seen/last_seen.
     t = [100.0]
-    reg = PassthroughRegistry(threshold=2, patterns=["*.pinned.com"], now=lambda: t[0])
+    w = [1000.0]
+    reg = PassthroughRegistry(threshold=2, patterns=["*.pinned.com"],
+                               now=lambda: t[0], wall=lambda: w[0])
     reg.record_failure("a.example.com", "1.1.1.1")
     t[0] = 101.0
+    w[0] = 1001.0
     reg.record_failure("a.example.com", "2.2.2.2")  # flips, last_seen later
+    w[0] = 1002.0
     # config-pattern host only appears after being seen via should_ignore
     reg.should_ignore("host.pinned.com")
 
@@ -71,14 +93,39 @@ def test_snapshot_shape_and_ordering():
     assert auto["source"] == "auto"
     assert auto["failures"] == 2
     assert set(auto["clients"]) == {"1.1.1.1", "2.2.2.2"}
-    assert "first_seen" in auto and "last_seen" in auto
+    assert auto["first_seen"] == 1000.0
+    assert auto["last_seen"] == 1001.0
 
     cfg = hosts["host.pinned.com"]
     assert cfg["source"] == "config"
     assert cfg["failures"] == 1
+    assert cfg["first_seen"] == 1002.0
+    assert cfg["last_seen"] == 1002.0
 
-    # sorted by last_seen desc: the auto host (touched at t=101) before... but
-    # config host touched at whatever `now` was when should_ignore ran (t=101 too,
-    # since we didn't advance t). Just assert it's a valid ordering (non-increasing).
-    last_seens = [e["last_seen"] for e in snap]
-    assert last_seens == sorted(last_seens, reverse=True)
+    # deterministic ordering under the fake wall clock: host.pinned.com was
+    # touched last (w=1002), a.example.com before it (w=1001).
+    assert [e["host"] for e in snap] == ["host.pinned.com", "a.example.com"]
+
+
+def test_should_ignore_records_client_ip_for_config_hosts():
+    reg = PassthroughRegistry(patterns=["*.pinned.com"])
+    reg.should_ignore("host.pinned.com", client_ip="5.5.5.5")
+    snap = {e["host"]: e for e in reg.snapshot()}
+    assert snap["host.pinned.com"]["clients"] == ["5.5.5.5"]
+
+
+def test_snapshot_active_flag_watching_vs_flipped():
+    reg = PassthroughRegistry(threshold=2)
+    reg.record_failure("watching.example.com", "1.1.1.1")  # below threshold
+    reg.record_failure("flipped.example.com", "1.1.1.1")
+    reg.record_failure("flipped.example.com", "1.1.1.1")   # flips
+    snap = {e["host"]: e for e in reg.snapshot()}
+    assert snap["watching.example.com"]["active"] is False
+    assert snap["flipped.example.com"]["active"] is True
+
+
+def test_snapshot_config_host_always_active():
+    reg = PassthroughRegistry(patterns=["*.pinned.com"])
+    reg.should_ignore("host.pinned.com")
+    snap = {e["host"]: e for e in reg.snapshot()}
+    assert snap["host.pinned.com"]["active"] is True

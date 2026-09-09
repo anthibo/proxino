@@ -3,17 +3,7 @@ import { clearFlows, download, fetchFlows, loadSession, caInfo, fetchConnectInfo
 import { useStore } from "../store";
 import { ExportMenu } from "./ExportMenu";
 import { Settings } from "./Settings";
-
-/** Small monochrome lock-open glyph, matching ClientsSidebar's passthrough icon. */
-function LockOpenIcon({ size = 13 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="5" y="11" width="14" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 7.5-2" />
-    </svg>
-  );
-}
+import { LockOpenIcon } from "./LockOpenIcon";
 
 const VIEWS: { key: "inspector" | "devices" | "dashboard"; label: string }[] = [
   { key: "inspector", label: "Inspector" },
@@ -24,7 +14,7 @@ const VIEWS: { key: "inspector" | "devices" | "dashboard"; label: string }[] = [
 export function TopBar({ onConnect }: { onConnect: () => void }) {
   const clear = useStore((s) => s.clear);
   const upsert = useStore((s) => s.upsertFlow);
-  const passthrough = useStore((s) => s.passthrough);
+  const passthroughActiveCount = useStore((s) => s.passthrough.filter((p) => p.active).length);
   const view = useStore((s) => s.view);
   const setView = useStore((s) => s.setView);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -80,10 +70,10 @@ export function TopBar({ onConnect }: { onConnect: () => void }) {
           <span className={"tb-dot " + (caOk ? "ok" : "off")} />
           {caOk == null ? "CA…" : caOk ? "CA trusted" : "CA not installed"}
         </span>
-        {passthrough.length > 0 && (
+        {passthroughActiveCount > 0 && (
           <span className="tb-status tb-passthrough"
                 title="Hosts whose apps refused the proxy certificate; forwarded encrypted">
-            <LockOpenIcon />{passthrough.length} passthrough
+            <LockOpenIcon size={13} />{passthroughActiveCount} passthrough
           </span>
         )}
       </div>

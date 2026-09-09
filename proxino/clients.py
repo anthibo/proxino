@@ -26,17 +26,19 @@ _DEVICES = [
 class ClientRegistry:
     def __init__(self, config_path: Path) -> None:
         self.config_path = Path(config_path)
-        self._labels: dict[str, str] = {}
         self._kinds: dict[str, str] = {}  # first identified device kind per ip
-        if self.config_path.exists():
-            try:
-                data = json.loads(self.config_path.read_text() or "{}")
-            except json.JSONDecodeError:
-                data = {}
-            self._labels = data.get("labels", {})
-            self._passthrough_patterns = data.get("passthrough_hosts", [])
-        else:
-            self._passthrough_patterns = []
+        data = self._read_config()
+        self._labels: dict[str, str] = data.get("labels", {})
+        self._passthrough_patterns = data.get("passthrough_hosts", [])
+
+    def _read_config(self) -> dict:
+        """Load the config file as-is, tolerating a missing or corrupt file."""
+        if not self.config_path.exists():
+            return {}
+        try:
+            return json.loads(self.config_path.read_text() or "{}")
+        except json.JSONDecodeError:
+            return {}
 
     def device_for(self, ip: str, user_agent: str | None = None) -> tuple[str, str]:
         """Return (label, kind) for a client, remembering the first kind seen."""
@@ -63,11 +65,16 @@ class ClientRegistry:
     def set_label(self, ip: str, label: str) -> None:
         self._labels[ip] = label
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
-        data = json.dumps({"labels": self._labels}, indent=2)
+        # Read-modify-write: reload whatever is on disk right now (it may
+        # have been edited by hand, e.g. passthrough_hosts) and only
+        # overwrite the "labels" key, so every other top-level key survives.
+        on_disk = self._read_config()
+        on_disk["labels"] = self._labels
+        payload = json.dumps(on_disk, indent=2)
         fd, tmp = tempfile.mkstemp(dir=self.config_path.parent, suffix=".tmp")
         try:
             with os.fdopen(fd, "w") as f:
-                f.write(data)
+                f.write(payload)
             os.replace(tmp, self.config_path)
         finally:
             if os.path.exists(tmp):

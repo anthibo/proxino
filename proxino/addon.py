@@ -58,23 +58,38 @@ class Proxino:
         self._publish({"type": evt_type, "flow": rec.meta()})
 
     def tls_clienthello(self, data) -> None:
-        if self.passthrough.should_ignore(data.context.client.sni):
-            data.ignore_connection = True
+        # A hook exception here kills the connection outright (mitmproxy
+        # treats it as fatal), so any malformed/partial `data.context` must
+        # be swallowed rather than raised.
+        try:
+            client = getattr(data.context, "client", None)
+            sni = getattr(client, "sni", None) if client is not None else None
+            peer = getattr(client, "peername", None) if client is not None else None
+            client_ip = peer[0] if peer else None
+            if self.passthrough.should_ignore(sni, client_ip=client_ip):
+                data.ignore_connection = True
+        except Exception:
+            _log.exception("proxino passthrough hook failed")
 
     def tls_failed_client(self, data) -> None:
-        host = data.context.client.sni
-        if host is None:
-            return
-        client_ip = data.context.client.peername[0]
-        flipped = self.passthrough.record_failure(host, client_ip)
-        hosts = self.passthrough.snapshot()
-        if flipped:
-            failures = next((h["failures"] for h in hosts if h["host"] == host), 0)
-            _log.info(
-                "proxino: passing through %s (client %s refused the proxy certificate %d times)",
-                host, client_ip, failures,
-            )
-        self._publish({"type": "passthrough.update", "hosts": hosts})
+        try:
+            client = getattr(data.context, "client", None)
+            host = getattr(client, "sni", None) if client is not None else None
+            if host is None:
+                return
+            peer = getattr(client, "peername", None) if client is not None else None
+            client_ip = peer[0] if peer else "unknown"
+            flipped = self.passthrough.record_failure(host, client_ip)
+            hosts = self.passthrough.snapshot()
+            if flipped:
+                failures = next((h["failures"] for h in hosts if h["host"] == host), 0)
+                _log.info(
+                    "proxino: passing through %s (client %s refused the proxy certificate %d times)",
+                    host, client_ip, failures,
+                )
+            self._publish({"type": "passthrough.update", "hosts": hosts})
+        except Exception:
+            _log.exception("proxino passthrough hook failed")
 
     def request(self, flow: HTTPFlow) -> None:
         # Stream a pending row the moment a request starts, so in-flight and

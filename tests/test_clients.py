@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from proxino.clients import ClientRegistry
 
@@ -55,6 +56,27 @@ def test_passthrough_patterns_read_from_config(tmp_path):
     p.write_text('{"passthrough_hosts": ["*.itunes.apple.com", "*.fbcdn.net"]}')
     r = ClientRegistry(p)
     assert r.passthrough_patterns() == ["*.itunes.apple.com", "*.fbcdn.net"]
+
+def test_set_label_preserves_other_config_keys(tmp_path):
+    # set_label must be read-modify-write: it should only ever touch the
+    # "labels" key, never clobber sibling top-level config like
+    # passthrough_hosts written by a human or another feature.
+    p = tmp_path / "config.json"
+    p.write_text(json.dumps({
+        "passthrough_hosts": ["*.itunes.apple.com"],
+        "labels": {"9.9.9.9": "Old Phone"},
+        "some_future_key": {"nested": True},
+    }))
+    r = ClientRegistry(p)
+    r.set_label("1.1.1.1", "New Phone")
+    data = json.loads(p.read_text())
+    assert data["passthrough_hosts"] == ["*.itunes.apple.com"]
+    assert data["labels"] == {"9.9.9.9": "Old Phone", "1.1.1.1": "New Phone"}
+    assert data["some_future_key"] == {"nested": True}
+    # and a freshly-loaded registry sees the same merged state
+    r2 = ClientRegistry(p)
+    assert r2.passthrough_patterns() == ["*.itunes.apple.com"]
+    assert r2.all_labels()["1.1.1.1"] == "New Phone"
 
 def test_set_label_is_atomic_no_partial_file(tmp_path, monkeypatch):
     import os

@@ -110,7 +110,18 @@ def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | Non
 
     @app.delete("/api/passthrough/{host}")
     async def remove_passthrough(host: str) -> dict:
-        if passthrough is None or not passthrough.remove(host):
+        if passthrough is None:
+            raise HTTPException(status_code=404, detail="not found")
+        current = {e["host"]: e for e in passthrough.snapshot()}
+        entry = current.get(host)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="not found")
+        if entry["source"] == "config":
+            raise HTTPException(
+                status_code=409,
+                detail="host matches a configured passthrough pattern; edit ~/.proxino/config.json",
+            )
+        if not passthrough.remove(host):
             raise HTTPException(status_code=404, detail="not found")
         await broadcaster.publish({"type": "passthrough.update", "hosts": passthrough.snapshot()})
         return {"removed": True}

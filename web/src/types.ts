@@ -30,7 +30,7 @@ export interface FlowDetail extends FlowMeta {
 }
 export interface ClientInfo { ip: string; label: string; count: number; kind?: DeviceKind; }
 export interface PassthroughHost {
-  host: string; source: "auto" | "config"; failures: number;
+  host: string; source: "auto" | "config"; active: boolean; failures: number;
   clients: string[]; first_seen: number; last_seen: number;
 }
 export type WSEvent =

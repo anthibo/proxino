@@ -35,7 +35,7 @@ describe("store", () => {
   });
   it("setPassthrough replaces the passthrough host list", () => {
     expect(useStore.getState().passthrough).toEqual([]);
-    const hosts = [{ host: "pinned.example.com", source: "auto" as const, failures: 2,
+    const hosts = [{ host: "pinned.example.com", source: "auto" as const, active: true, failures: 2,
       clients: ["1.1.1.1"], first_seen: 1, last_seen: 2 }];
     useStore.getState().setPassthrough(hosts);
     expect(useStore.getState().passthrough).toEqual(hosts);
