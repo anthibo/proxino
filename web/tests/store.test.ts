@@ -33,4 +33,11 @@ describe("store", () => {
     useStore.getState().selectClient("2.2.2.2");
     expect(useStore.getState().visibleFlows().map((f) => f.id)).toEqual(["2"]);
   });
+  it("setPassthrough replaces the passthrough host list", () => {
+    expect(useStore.getState().passthrough).toEqual([]);
+    const hosts = [{ host: "pinned.example.com", source: "auto" as const, failures: 2,
+      clients: ["1.1.1.1"], first_seen: 1, last_seen: 2 }];
+    useStore.getState().setPassthrough(hosts);
+    expect(useStore.getState().passthrough).toEqual(hosts);
+  });
 });

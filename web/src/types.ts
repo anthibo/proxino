@@ -29,6 +29,11 @@ export interface FlowDetail extends FlowMeta {
   timing: TimingDetail;
 }
 export interface ClientInfo { ip: string; label: string; count: number; kind?: DeviceKind; }
+export interface PassthroughHost {
+  host: string; source: "auto" | "config"; failures: number;
+  clients: string[]; first_seen: number; last_seen: number;
+}
 export type WSEvent =
   | { type: "flow.new" | "flow.complete" | "flow.error"; flow: FlowMeta }
-  | { type: "client.new"; client: ClientInfo };
+  | { type: "client.new"; client: ClientInfo }
+  | { type: "passthrough.update"; hosts: PassthroughHost[] };

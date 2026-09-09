@@ -832,6 +832,18 @@ html, body, #root {
   font-family: "JetBrains Mono", ui-monospace, monospace; }
 .client.selected .badge { background: rgba(255,255,255,.16); color: #fff; border-color: transparent; }
 
+/* ---- Passthrough section (pinned hosts forwarded encrypted) ---- */
+.pth-row { display: grid; grid-template-columns: 30px 1fr auto; gap: 9px; align-items: center;
+  padding: 8px 10px; margin: 1px 8px; border-radius: 9px; }
+.pth-ico { width: 30px; height: 30px; border-radius: 8px; background: var(--chip); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center; color: var(--muted); flex: 0 0 auto; }
+.pth-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pth-name { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pth-sub { font-size: 11px; color: var(--muted); font-family: "JetBrains Mono", ui-monospace, monospace;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pth-retry { padding: 4px 9px; font-size: 11px; }
+.tb-passthrough { color: var(--sec); }
+
 /* ---- Flow table: header + 8 columns (dot method status host path type size time) ---- */
 .flowtable-cols, .flowhead, .flowrow {
   display: grid;

@@ -10,13 +10,14 @@ import { DevicesView } from "./components/DevicesView";
 import { DashboardView } from "./components/DashboardView";
 import { ConnectDeviceModal } from "./components/ConnectDeviceModal";
 import { connectWS } from "./ws";
-import { fetchFlows } from "./api";
+import { fetchFlows, fetchPassthrough } from "./api";
 import { useStore } from "./store";
 import "./theme.css";
 
 export function App() {
   const [showConnect, setShowConnect] = useState(false);
   const upsert = useStore((s) => s.upsertFlow);
+  const setPassthrough = useStore((s) => s.setPassthrough);
   const view = useStore((s) => s.view);
   const isEmpty = useStore((s) => s.flows.size === 0);
   useEffect(() => {
@@ -28,13 +29,19 @@ export function App() {
     if ((w.__TAURI_INTERNALS__ || w.__TAURI__) && isMac) document.body.classList.add("in-tauri");
   }, []);
   useEffect(() => {
-    const resync = () => fetchFlows().then((fs) => fs.forEach(upsert)).catch(() => {});
+    const resync = () => {
+      fetchFlows().then((fs) => fs.forEach(upsert)).catch(() => {});
+      fetchPassthrough().then(setPassthrough).catch(() => {});
+    };
     resync();
     return connectWS(
-      (e) => { if ("flow" in e) upsert(e.flow); },
+      (e) => {
+        if ("flow" in e) upsert(e.flow);
+        else if (e.type === "passthrough.update") setPassthrough(e.hosts);
+      },
       resync,
     );
-  }, [upsert]);
+  }, [upsert, setPassthrough]);
   return (
     <div className="app">
       <TopBar onConnect={() => setShowConnect(true)} />
