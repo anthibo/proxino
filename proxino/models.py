@@ -38,6 +38,15 @@ class Timing(BaseModel):
     ttfb_ms: int | None = None
     download_ms: int | None = None
 
+FlowKind = Literal["http", "ws"]
+
+class WsSummary(BaseModel):
+    messages: int = 0
+    open: bool = True
+    closed_by: Optional[str] = None   # "client" | "server" | None
+    close_code: Optional[int] = None
+    close_reason: Optional[str] = None
+
 class Flow(BaseModel):
     id: str
     timestamp: int
@@ -56,6 +65,8 @@ class Flow(BaseModel):
     timing: Timing
     state: FlowState = "pending"
     error: Optional[str] = None
+    kind: FlowKind = "http"
+    ws: Optional[WsSummary] = None
 
     def meta(self) -> dict:
         d = self.model_dump()

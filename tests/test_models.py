@@ -39,3 +39,9 @@ def test_meta_strips_body_pretty_but_keeps_body_view():
     assert meta["response"]["body_view"] == "protobuf"
     d = flow.model_dump()
     assert d["response"]["body_pretty"] == "1: 150\n"
+
+def test_flow_kind_defaults_and_ws_summary_in_meta():
+    f = make_flow()
+    assert f.kind == "http" and f.ws is None and f.meta()["kind"] == "http"
+    g = make_flow(kind="ws", ws={"messages": 3, "open": True, "closed_by": None, "close_code": None, "close_reason": None})
+    assert g.meta()["ws"]["messages"] == 3 and g.meta()["ws"]["open"] is True
