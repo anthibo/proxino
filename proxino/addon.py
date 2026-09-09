@@ -39,6 +39,7 @@ class Proxino:
         app = make_app(self.store, self.registry, self.broadcaster,
                        replayer=self.replay, edited_replayer=self.replay_edited,
                        passthrough=self.passthrough,
+                       wsstore=self.wsstore,
                        web_port=port, proxy_port=proxy_port)
         config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
         asyncio.ensure_future(uvicorn.Server(config).serve())

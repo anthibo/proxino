@@ -3,6 +3,7 @@ from proxino.server import make_app
 from proxino.store import FlowStore
 from proxino.clients import ClientRegistry
 from proxino.broadcaster import Broadcaster
+from proxino.wsstore import WsStore
 from tests.test_models import make_flow
 
 def client(tmp_path):
@@ -152,3 +153,13 @@ def test_passthrough_delete_config_host_409(tmp_path):
     assert "config.json" in r.json()["detail"]
     # untouched — still listed as a config passthrough host
     assert c.get("/api/passthrough").json()[0]["host"] == "host.pinned.com"
+
+def test_ws_messages_endpoint(tmp_path):
+    store = FlowStore(); store.add(make_flow(id="w", kind="ws", ws={"messages": 0, "open": True}))
+    ws = WsStore(); ws.append("w", True, True, b"hello", 1.0); ws.append("w", False, True, b"world", 2.0)
+    c = TestClient(make_app(store, ClientRegistry(tmp_path / "c.json"), Broadcaster(), wsstore=ws))
+    body = c.get("/api/flows/w/ws").json()
+    assert body["total"] == 2 and [m["text"] for m in body["messages"]] == ["hello", "world"]
+    assert c.get("/api/flows/w/ws?after=0").json()["messages"][0]["i"] == 1
+    assert c.get("/api/flows/nope/ws").status_code == 404
+    store.add(make_flow(id="h")); assert c.get("/api/flows/h/ws").json() == {"messages": [], "total": 0}

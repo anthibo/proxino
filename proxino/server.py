@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -9,6 +9,9 @@ from .sessions import dump_session, load_session
 from .har import flows_to_har
 from .cainfo import ca_info
 from proxino.paths import web_dist
+
+if TYPE_CHECKING:
+    from .wsstore import WsStore
 
 class LabelBody(BaseModel):
     label: str
@@ -22,6 +25,7 @@ class ReplayEdit(BaseModel):
 def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | None = None,
              edited_replayer: Callable[[str, dict], bool] | None = None,
              passthrough=None,
+             wsstore: "WsStore | None" = None,
              web_port: int = 8081, proxy_port: int = 8080) -> FastAPI:
     app = FastAPI(title="Proxino")
 
@@ -86,6 +90,14 @@ def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | Non
             headers={"Content-Disposition": "attachment; filename=proxino.har"},
         )
 
+    @app.get("/api/flows/{flow_id}/ws")
+    def ws_messages(flow_id: str, after: int = -1) -> dict:
+        if store.get(flow_id) is None:
+            raise HTTPException(status_code=404, detail="not found")
+        if wsstore is None:
+            return {"messages": [], "total": 0}
+        msgs, total = wsstore.get(flow_id, after=after)
+        return {"messages": msgs, "total": total}
 
     @app.post("/api/flows/{flow_id}/replay")
     async def replay(flow_id: str) -> dict:
