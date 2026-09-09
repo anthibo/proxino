@@ -1,6 +1,6 @@
 [package]
 name = "desktop"
-version = "0.1.0"
+version = "0.1.1"
 description = "Proxino desktop — self-hosted network inspector for mobile HTTPS"
 authors = ["Abdulrahman Khalid"]
 license = "MIT"
