@@ -67,8 +67,8 @@ export function App() {
       fetchPassthrough().then(setPassthrough).catch(() => {});
       // A reconnect can follow a dropped connection during which frames on
       // the currently open ws flow were missed, so re-pull its buffer too.
-      const { selectedId, detail } = useStore.getState();
-      if (selectedId && detail?.kind === "ws") {
+      const { selectedId } = useStore.getState();
+      if (selectedId && useStore.getState().flows.get(selectedId)?.kind === "ws") {
         fetchWsMessages(selectedId).then((r) => mergeWsMessages(selectedId, r.messages)).catch(() => {});
       }
     };

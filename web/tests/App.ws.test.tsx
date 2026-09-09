@@ -84,4 +84,17 @@ describe("App websocket wiring", () => {
     capturedOnEvent!({ type: "ws.message", flow_id: "w1", message: msg });
     expect(useStore.getState().wsMessages["w1"]?.map((m) => m.i)).toContain(5);
   });
+
+  it("refetches frames on reconnect when flow is upgraded to ws after selection", async () => {
+    const httpFlow = mk("f1");
+    useStore.getState().upsertFlow(httpFlow);
+    const httpDetail = { ...httpFlow, request: { headers: [], size: 0, body: null }, response: null, timing: { start: 1, req_done: 1, resp_start: null, resp_done: null, duration_ms: null, connect_ms: null, tls_ms: null, ttfb_ms: null, download_ms: null } } as FlowDetail;
+    useStore.getState().select("f1", httpDetail);
+    render(<App />);
+    await waitFor(() => expect(capturedOnReconnect).toBeTruthy());
+    (fetchWsMessages as unknown as ReturnType<typeof vi.fn>).mockClear();
+    useStore.getState().upsertFlow(mk("f1", { kind: "ws" }));
+    capturedOnReconnect!();
+    await waitFor(() => expect(fetchWsMessages).toHaveBeenCalledWith("f1"));
+  });
 });
