@@ -46,6 +46,16 @@ def test_corrupt_config_recovers_gracefully(tmp_path):
     assert r.all_labels() == {}
     assert r.label_for("1.1.1.1", "iPhone") == "iPhone"
 
+def test_passthrough_patterns_default_empty(tmp_path):
+    r = ClientRegistry(tmp_path / "config.json")
+    assert r.passthrough_patterns() == []
+
+def test_passthrough_patterns_read_from_config(tmp_path):
+    p = tmp_path / "config.json"
+    p.write_text('{"passthrough_hosts": ["*.itunes.apple.com", "*.fbcdn.net"]}')
+    r = ClientRegistry(p)
+    assert r.passthrough_patterns() == ["*.itunes.apple.com", "*.fbcdn.net"]
+
 def test_set_label_is_atomic_no_partial_file(tmp_path, monkeypatch):
     import os
     p = tmp_path / "config.json"

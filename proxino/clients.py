@@ -34,6 +34,9 @@ class ClientRegistry:
             except json.JSONDecodeError:
                 data = {}
             self._labels = data.get("labels", {})
+            self._passthrough_patterns = data.get("passthrough_hosts", [])
+        else:
+            self._passthrough_patterns = []
 
     def device_for(self, ip: str, user_agent: str | None = None) -> tuple[str, str]:
         """Return (label, kind) for a client, remembering the first kind seen."""
@@ -72,3 +75,6 @@ class ClientRegistry:
 
     def all_labels(self) -> dict[str, str]:
         return dict(self._labels)
+
+    def passthrough_patterns(self) -> list[str]:
+        return list(self._passthrough_patterns)
