@@ -35,3 +35,15 @@ describe("FlowTable", () => {
     expect(screen.getByText("4.0 KB")).toBeInTheDocument();     // SIZE cell
   });
 });
+
+const base = { id: "w", timestamp: 1, client: { ip: "1.2.3.4", label: "iPhone" }, method: "GET", scheme: "wss", host: "ws.example.com", port: 443,
+  path: "/socket", query: "", http_version: "HTTP/1.1", request: { headers: [], size: 0 }, response: { status: 101, reason: "Switching Protocols", headers: [], size: 0, content_type: "" },
+  duration_ms: null, state: "complete" as const, error: null };
+test("ws row shows ws type badge, live dot and message count", () => {
+  useStore.getState().clear();
+  useStore.getState().upsertFlow({ ...base, kind: "ws", ws: { messages: 12, open: true, closed_by: null, close_code: null, close_reason: null } });
+  render(<FlowTable />);
+  expect(screen.getByText("ws")).toBeInTheDocument();
+  expect(screen.getByText("12 msgs")).toBeInTheDocument();
+  expect(document.querySelector(".ws-live")).not.toBeNull();
+});

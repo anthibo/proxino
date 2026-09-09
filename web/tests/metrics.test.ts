@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest";
 import { deviceStats, dashboard } from "../src/metrics";
 import type { FlowMeta, DeviceKind } from "../src/types";
 
-const mk = (o: Partial<FlowMeta> & { ip?: string; status?: number | null; ms?: number | null; size?: number; kind?: DeviceKind }): FlowMeta => ({
+const mk = (o: Omit<Partial<FlowMeta>, "kind"> & { ip?: string; status?: number | null; ms?: number | null; size?: number; deviceKind?: DeviceKind }): FlowMeta => ({
   id: Math.random() + "", timestamp: o.timestamp ?? 1, method: o.method ?? "GET",
-  client: { ip: o.ip ?? "1.1.1.1", label: o.ip ?? "1.1.1.1", kind: o.kind ?? "unknown" },
+  client: { ip: o.ip ?? "1.1.1.1", label: o.ip ?? "1.1.1.1", kind: o.deviceKind ?? "unknown" },
   scheme: "https", host: o.host ?? "api.x", port: 443, path: o.path ?? "/", query: "", http_version: "HTTP/2",
   request: { headers: [], size: 100 },
   response: o.status === null ? null : { status: o.status ?? 200, reason: "", headers: [], size: o.size ?? 200, content_type: "application/json" },
@@ -14,7 +14,7 @@ const mk = (o: Partial<FlowMeta> & { ip?: string; status?: number | null; ms?: n
 describe("deviceStats", () => {
   it("aggregates count, error rate, avg latency, bytes per device", () => {
     const stats = deviceStats([
-      mk({ ip: "1.1.1.1", status: 200, ms: 100, size: 200, kind: "phone" }),
+      mk({ ip: "1.1.1.1", status: 200, ms: 100, size: 200, deviceKind: "phone" }),
       mk({ ip: "1.1.1.1", status: 500, ms: 300, size: 400 }),
       mk({ ip: "2.2.2.2", status: 200, ms: 50, size: 100 }),
     ]);

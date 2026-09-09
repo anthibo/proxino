@@ -66,3 +66,14 @@ describe("store.detailWidth", () => {
     expect(localStorage.getItem("proxino.detailWidth")).toBe("500");
   });
 });
+
+test("appendWsMessage caps at 500 and keeps order", () => {
+  const s = useStore.getState();
+  for (let i = 0; i < 505; i++) s.appendWsMessage("w", { i, t: i, dir: "out", type: "text", size: 1, text: "x", view: null, pretty: null });
+  const msgs = useStore.getState().wsMessages["w"];
+  expect(msgs.length).toBe(500); expect(msgs[0].i).toBe(5); expect(msgs[499].i).toBe(504);
+});
+test("setWsMessages replaces", () => {
+  useStore.getState().setWsMessages("w", [{ i: 9, t: 0, dir: "in", type: "binary", size: 2, text: null, view: null, pretty: null }]);
+  expect(useStore.getState().wsMessages["w"].map((m) => m.i)).toEqual([9]);
+});

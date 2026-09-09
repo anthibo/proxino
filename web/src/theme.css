@@ -871,6 +871,9 @@ html, body, #root {
 .flowrow { padding: 8px 14px; }
 .flowhead .ta-r, .flowrow .ta-r { text-align: right; }
 .type { font-size: 11px; color: var(--sec); font-family: "JetBrains Mono", ui-monospace, monospace; }
+.type-ws { color: var(--brand); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.ws-live { width: 6px; height: 6px; border-radius: 999px; background: var(--ok); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
 .size { color: var(--muted); font-size: 11.5px; font-family: "JetBrains Mono", ui-monospace, monospace; }
 .flowrow .time { text-align: right; }
 

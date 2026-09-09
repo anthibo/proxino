@@ -18,6 +18,7 @@ export function App() {
   const [showConnect, setShowConnect] = useState(false);
   const upsert = useStore((s) => s.upsertFlow);
   const setPassthrough = useStore((s) => s.setPassthrough);
+  const appendWsMessage = useStore((s) => s.appendWsMessage);
   const view = useStore((s) => s.view);
   const isEmpty = useStore((s) => s.flows.size === 0);
   const detailWidth = useStore((s) => s.detailWidth);
@@ -67,12 +68,14 @@ export function App() {
     resync();
     return connectWS(
       (e) => {
-        if ("flow" in e) upsert(e.flow);
+        if (e.type === "flow.update") upsert(e.flow);
+        else if ("flow" in e) upsert(e.flow);
+        else if (e.type === "ws.message") appendWsMessage(e.flow_id, e.message);
         else if (e.type === "passthrough.update") setPassthrough(e.hosts);
       },
       resync,
     );
-  }, [upsert, setPassthrough]);
+  }, [upsert, setPassthrough, appendWsMessage]);
   return (
     <div className="app">
       <TopBar onConnect={() => setShowConnect(true)} />

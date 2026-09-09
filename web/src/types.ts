@@ -15,6 +15,14 @@ export interface TimingDetail {
   ttfb_ms: number | null;
   download_ms: number | null;
 }
+export interface WsMessage {
+  i: number; t: number; dir: "in" | "out"; type: "text" | "binary"; size: number;
+  text: string | null; view: string | null; pretty: string | null;
+}
+export interface WsSummary {
+  messages: number; open: boolean; closed_by: "client" | "server" | null;
+  close_code: number | null; close_reason: string | null;
+}
 export interface FlowMeta {
   id: string; timestamp: number; client: ClientRef;
   method: string; scheme: string; host: string; port: number;
@@ -22,6 +30,7 @@ export interface FlowMeta {
   server_addr?: string | null; tls_version?: string | null;
   request: ReqMeta; response: RespMeta | null;
   duration_ms: number | null; state: FlowState; error: string | null;
+  kind?: "http" | "ws"; ws?: WsSummary | null;
 }
 export interface FlowDetail extends FlowMeta {
   request: ReqMeta & { body: string | null; body_pretty?: string | null };
@@ -36,4 +45,6 @@ export interface PassthroughHost {
 export type WSEvent =
   | { type: "flow.new" | "flow.complete" | "flow.error"; flow: FlowMeta }
   | { type: "client.new"; client: ClientInfo }
-  | { type: "passthrough.update"; hosts: PassthroughHost[] };
+  | { type: "passthrough.update"; hosts: PassthroughHost[] }
+  | { type: "flow.update"; flow: FlowMeta }
+  | { type: "ws.message"; flow_id: string; message: WsMessage };

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { FlowMeta, FlowDetail, PassthroughHost } from "./types";
+import type { FlowMeta, FlowDetail, PassthroughHost, WsMessage } from "./types";
 import { parseQuery } from "./filters/dsl";
 
 export type View = "inspector" | "devices" | "dashboard";
@@ -34,6 +34,7 @@ interface State {
   view: View;
   passthrough: PassthroughHost[];
   detailWidth: number;
+  wsMessages: Record<string, WsMessage[]>;
   setView: (v: View) => void;
   upsertFlow: (f: FlowMeta) => void;
   setQuery: (q: string) => void;
@@ -41,6 +42,8 @@ interface State {
   select: (id: string | null, detail?: FlowDetail | null) => void;
   setPassthrough: (hosts: PassthroughHost[]) => void;
   setDetailWidth: (n: number) => void;
+  appendWsMessage: (flowId: string, m: WsMessage) => void;
+  setWsMessages: (flowId: string, msgs: WsMessage[]) => void;
   clear: () => void;
   visibleFlows: () => FlowMeta[];
   allFlows: () => FlowMeta[];
@@ -50,6 +53,7 @@ export const useStore = create<State>((set, get) => ({
   flows: new Map(), order: [], selectedId: null, detail: null,
   query: "", clientIp: null, view: "inspector", passthrough: [],
   detailWidth: loadDetailWidth(),
+  wsMessages: {},
   setView: (view) => set({ view }),
   setPassthrough: (passthrough) => set({ passthrough }),
   setDetailWidth: (n) => {
@@ -68,7 +72,13 @@ export const useStore = create<State>((set, get) => ({
   setQuery: (query) => set({ query }),
   selectClient: (clientIp) => set({ clientIp }),
   select: (selectedId, detail = null) => set({ selectedId, detail }),
-  clear: () => set({ flows: new Map(), order: [], selectedId: null, detail: null, query: "", clientIp: null }),
+  appendWsMessage: (flowId, m) => set((s) => {
+    const cur = s.wsMessages[flowId] ?? [];
+    const next = cur.length >= 500 ? [...cur.slice(cur.length - 499), m] : [...cur, m];
+    return { wsMessages: { ...s.wsMessages, [flowId]: next } };
+  }),
+  setWsMessages: (flowId, msgs) => set((s) => ({ wsMessages: { ...s.wsMessages, [flowId]: msgs.slice(-500) } })),
+  clear: () => set({ flows: new Map(), order: [], selectedId: null, detail: null, query: "", clientIp: null, wsMessages: {} }),
   visibleFlows: () => {
     const s = get();
     const pred = parseQuery(s.query);

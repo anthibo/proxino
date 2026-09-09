@@ -30,8 +30,12 @@ export function FlowTable() {
           <span className="status" style={{ color: statusColor(f.response?.status) }}>{f.response?.status ?? "…"}</span>
           <span className="host">{f.host}</span>
           <span className="path">{f.path}</span>
-          <span className="type">{typeLabel(f.response?.content_type)}</span>
-          <span className="size ta-r">{bytes(f.response?.size)}</span>
+          {f.kind === "ws" ? (
+            <span className="type type-ws">ws{f.ws?.open && <span className="ws-live" />}</span>
+          ) : (
+            <span className="type">{typeLabel(f.response?.content_type)}</span>
+          )}
+          <span className="size ta-r">{f.kind === "ws" ? `${f.ws?.messages ?? 0} msgs` : bytes(f.response?.size)}</span>
           <span className="time ta-r">{f.duration_ms != null ? `${f.duration_ms} ms` : ""}</span>
         </div>
       ))}

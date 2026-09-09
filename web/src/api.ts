@@ -1,7 +1,9 @@
-import type { FlowMeta, FlowDetail, ClientInfo, PassthroughHost } from "./types";
+import type { FlowMeta, FlowDetail, ClientInfo, PassthroughHost, WsMessage } from "./types";
 const j = async (r: Response) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); };
 export const fetchFlows = (): Promise<FlowMeta[]> => fetch("/api/flows").then(j);
 export const fetchDetail = (id: string): Promise<FlowDetail> => fetch(`/api/flows/${id}`).then(j);
+export const fetchWsMessages = (id: string, after = -1): Promise<{ messages: WsMessage[]; total: number }> =>
+  fetch(`/api/flows/${id}/ws?after=${after}`).then(j);
 export const clearFlows = () => fetch("/api/flows", { method: "DELETE" }).then(j);
 export const fetchClients = (): Promise<ClientInfo[]> => fetch("/api/clients").then(j);
 export const setClientLabel = (ip: string, label: string) =>
