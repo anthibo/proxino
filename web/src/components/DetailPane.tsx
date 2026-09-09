@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "../store";
 import { toCurl } from "../curl";
 import { replay } from "../api";
@@ -6,21 +6,34 @@ import { clockTime } from "../format";
 import { JsonView } from "./JsonView";
 import { Timing } from "./Timing";
 import { ReplayModal } from "./ReplayModal";
+import { WsMessages } from "./WsMessages";
 
-type Tab = "overview" | "headers" | "body" | "timing";
+type Tab = "overview" | "headers" | "body" | "messages" | "timing";
 
 function requestContentType(headers: [string, string][]): string | undefined {
   const h = headers.find(([k]) => k.toLowerCase() === "content-type");
   return h?.[1];
 }
 
+function wsFramesLine(ws: NonNullable<import("../types").FlowMeta["ws"]>): string {
+  if (ws.open) return `${ws.messages} · open`;
+  if (ws.closed_by) return `${ws.messages} · closed by ${ws.closed_by}${ws.close_code != null ? ` (${ws.close_code})` : ""}`;
+  return `${ws.messages}`;
+}
+
 export function DetailPane({ width }: { width?: number } = {}) {
   const detail = useStore((s) => s.detail);
+  const isWs = detail?.kind === "ws";
   const [tab, setTab] = useState<Tab>("body");
   const [replayOpen, setReplayOpen] = useState(false);
+  useEffect(() => {
+    setTab(isWs ? "messages" : "body");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail?.id]);
   const style = width != null ? { width } : undefined;
   if (!detail) return <div className="detail empty" style={style}>Select a request</div>;
   const r = detail.response;
+  const tabs: Tab[] = isWs ? ["overview", "headers", "messages", "timing"] : ["overview", "headers", "body", "timing"];
   return (
     <div className="detail" style={style}>
       <div className="detail-head">
@@ -33,15 +46,17 @@ export function DetailPane({ width }: { width?: number } = {}) {
       </div>
       <div className="detail-url">{detail.scheme}://{detail.host}{detail.path}</div>
       <div className="detail-actions">
-        <button className="chip primary" onClick={() => replay(detail.id).catch(() => {})}>
-          <span className="play-ico">▶</span> Replay
-        </button>
-        <button className="chip" onClick={() => setReplayOpen(true)}>Edit &amp; Resend</button>
+        {!isWs && (
+          <button className="chip primary" onClick={() => replay(detail.id).catch(() => {})}>
+            <span className="play-ico">▶</span> Replay
+          </button>
+        )}
+        {!isWs && <button className="chip" onClick={() => setReplayOpen(true)}>Edit &amp; Resend</button>}
         <button className="chip" onClick={() => navigator.clipboard.writeText(toCurl(detail))}>Copy as cURL</button>
       </div>
       {replayOpen && <ReplayModal detail={detail} onClose={() => setReplayOpen(false)} />}
       <div className="detail-tabs">
-        {(["overview", "headers", "body", "timing"] as Tab[]).map((t) => (
+        {tabs.map((t) => (
           <button key={t} className={"tab" + (tab === t ? " active" : "")} onClick={() => setTab(t)}>
             {t[0].toUpperCase() + t.slice(1)}
           </button>
@@ -56,6 +71,9 @@ export function DetailPane({ width }: { width?: number } = {}) {
           <div className="gen-row"><span className="gk">Status</span><span className="gv">{r ? `${r.status} ${r.reason}` : detail.state}</span></div>
           <div className="gen-row"><span className="gk">Started</span><span className="gv mono">{clockTime(detail.timestamp)}</span></div>
           <div className="gen-row"><span className="gk">Duration</span><span className="gv mono">{detail.duration_ms != null ? `${detail.duration_ms} ms` : "—"}</span></div>
+          {isWs && detail.ws && (
+            <div className="gen-row"><span className="gk">Frames</span><span className="gv mono">{wsFramesLine(detail.ws)}</span></div>
+          )}
         </div>
       )}
       {tab === "headers" && (
@@ -96,6 +114,7 @@ export function DetailPane({ width }: { width?: number } = {}) {
           </div>
         </div>
       )}
+      {tab === "messages" && <WsMessages flowId={detail.id} />}
       {tab === "timing" && <Timing timing={detail.timing} />}
     </div>
   );
