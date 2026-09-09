@@ -36,4 +36,9 @@ describe("parseQuery", () => {
     expect(parseQuery("type:json")(f())).toBe(true);
     expect(parseQuery("type:webp")(f())).toBe(false);
   });
+  it("type:ws matches websocket flows", () => {
+    const pred = parseQuery("type:ws");
+    expect(pred({ ...f(), kind: "ws" } as any)).toBe(true);
+    expect(pred({ ...f(), kind: "http", response: { ...f().response, content_type: "application/json" } } as any)).toBe(false);
+  });
 });

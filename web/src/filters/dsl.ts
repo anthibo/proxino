@@ -29,6 +29,9 @@ const termPredicate = (token: string): Predicate => {
   }
   const [, field, op, raw] = m;
   return (f) => {
+    if (op === ":" && field === "type" && raw === "ws") {
+      return f.kind === "ws";
+    }
     const val = fieldValue(f, field);
     if (op === ">=") return Number(val) >= Number(raw);
     if (op === "<=") return Number(val) <= Number(raw);

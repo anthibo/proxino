@@ -56,6 +56,7 @@ The commercial inspectors are excellent tools, and if you need breakpoints, map-
 ## Features
 
 - **Live capture** of HTTP/HTTPS flows, streamed to the browser over WebSocket.
+- **WebSocket frames** — each connection is a live row; the Messages tab streams frames with direction, size, and JSON/MsgPack/Protobuf previews.
 - **Per‑device grouping** — clients are auto‑named from the User‑Agent (iPhone, Android app, Mac…) with per‑device request counts; rename any device inline.
 - **Filter DSL** — `status:>=400 host:*.example.com path:/v2/*`, with autocomplete, quick method chips (All/GET/POST/4xx/5xx), an "Errors only" toggle, and saved filters.
 - **Rich response viewer** — collapsible syntax‑highlighted JSON, HTML/XML highlighting with a rendered Preview, line numbers, content‑type badge, and an error banner for 4xx/5xx — and decoded views for Protobuf/gRPC (schema-less), MsgPack, multipart and form bodies; request bodies shown alongside responses.
