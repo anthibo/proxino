@@ -62,15 +62,10 @@ class ClientRegistry:
     def kind_for(self, ip: str) -> str:
         return self._kinds.get(ip, "unknown")
 
-    def set_label(self, ip: str, label: str) -> None:
-        self._labels[ip] = label
+    def _write_config(self, data: dict) -> None:
+        """Atomically persist `data` as the whole config file."""
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
-        # Read-modify-write: reload whatever is on disk right now (it may
-        # have been edited by hand, e.g. passthrough_hosts) and only
-        # overwrite the "labels" key, so every other top-level key survives.
-        on_disk = self._read_config()
-        on_disk["labels"] = self._labels
-        payload = json.dumps(on_disk, indent=2)
+        payload = json.dumps(data, indent=2)
         fd, tmp = tempfile.mkstemp(dir=self.config_path.parent, suffix=".tmp")
         try:
             with os.fdopen(fd, "w") as f:
@@ -80,8 +75,29 @@ class ClientRegistry:
             if os.path.exists(tmp):
                 os.remove(tmp)
 
+    def set_label(self, ip: str, label: str) -> None:
+        self._labels[ip] = label
+        # Read-modify-write: reload whatever is on disk right now (it may
+        # have been edited by hand, e.g. passthrough_hosts) and only
+        # overwrite the "labels" key, so every other top-level key survives.
+        on_disk = self._read_config()
+        on_disk["labels"] = self._labels
+        self._write_config(on_disk)
+
     def all_labels(self) -> dict[str, str]:
         return dict(self._labels)
 
     def passthrough_patterns(self) -> list[str]:
         return list(self._passthrough_patterns)
+
+    def breakpoints(self) -> dict:
+        data = self._read_config().get("breakpoints") or {}
+        rules = [r for r in data.get("rules", []) if isinstance(r, dict)]
+        return {"enabled": bool(data.get("enabled", True)), "rules": rules}
+
+    def set_breakpoints(self, data: dict) -> None:
+        from proxino.breakpoints import BreakpointRule
+        rules = [BreakpointRule.from_dict(r).to_dict() for r in data.get("rules", [])]
+        cfg = self._read_config()
+        cfg["breakpoints"] = {"enabled": bool(data.get("enabled", True)), "rules": rules}
+        self._write_config(cfg)

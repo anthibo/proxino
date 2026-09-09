@@ -1,5 +1,8 @@
 import json
 from pathlib import Path
+
+import pytest
+
 from proxino.clients import ClientRegistry
 
 def test_guess_from_user_agent(tmp_path):
@@ -92,3 +95,14 @@ def test_set_label_is_atomic_no_partial_file(tmp_path, monkeypatch):
     assert calls["n"] == 1                      # went through os.replace
     assert list(tmp_path.glob("*.tmp")) == []   # no leftover temp file
     assert ClientRegistry(p).all_labels()["1.1.1.1"] == "Phone"
+
+def test_breakpoints_config_roundtrip_preserves_keys(tmp_path):
+    p = tmp_path / "c.json"
+    p.write_text('{"labels": {"1.1.1.1": "me"}, "passthrough_hosts": ["*.a"]}')
+    reg = ClientRegistry(p)
+    assert reg.breakpoints() == {"enabled": True, "rules": []}
+    reg.set_breakpoints({"enabled": False, "rules": [{"id": "r1", "host": "*.soum.sa", "phase": "request"}]})
+    data = json.loads(p.read_text())
+    assert data["passthrough_hosts"] == ["*.a"] and data["labels"] == {"1.1.1.1": "me"}
+    assert data["breakpoints"]["rules"][0]["method"] == "" and data["breakpoints"]["enabled"] is False
+    with pytest.raises(ValueError): reg.set_breakpoints({"enabled": True, "rules": [{"id": "z", "phase": "x"}]})
