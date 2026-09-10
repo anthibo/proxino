@@ -76,7 +76,7 @@ def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | Non
         return d
 
     @app.delete("/api/flows")
-    def clear() -> dict:
+    async def clear() -> dict:
         (on_clear or store.clear)()
         return {"ok": True}
 

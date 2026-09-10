@@ -46,6 +46,25 @@ def test_clear_uses_provided_hook_instead_of_bare_store_clear(tmp_path):
     assert calls == [1]
     assert c.get("/api/flows").json() == []
 
+def test_clear_runs_on_the_event_loop(tmp_path):
+    # DELETE /api/flows must run on the event loop: on_clear (Proxino.clear)
+    # calls self._publish(...) -> asyncio.ensure_future(...) whenever a flow
+    # is paused at clear time, which raises RuntimeError with no running
+    # loop (i.e. in a threadpool-worker sync handler).
+    store = FlowStore(); store.add(make_flow(id="a"))
+    reg = ClientRegistry(tmp_path / "c.json")
+    calls = []
+    def on_clear():
+        asyncio.get_running_loop()
+        calls.append(1)
+        store.clear()
+    c = TestClient(make_app(store, reg, Broadcaster(), on_clear=on_clear),
+                   raise_server_exceptions=False)
+    resp = c.delete("/api/flows")
+    assert resp.status_code == 200
+    assert calls == [1]
+    assert c.get("/api/flows").json() == []
+
 def test_connect_info(tmp_path):
     c, _, _ = client(tmp_path)
     info = c.get("/api/connect-info").json()
