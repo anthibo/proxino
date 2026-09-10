@@ -98,6 +98,14 @@ class ClientRegistry:
     def set_breakpoints(self, data: dict) -> None:
         from proxino.breakpoints import BreakpointRule
         rules = [BreakpointRule.from_dict(r).to_dict() for r in data.get("rules", [])]
+        for r in rules:
+            # An *enabled* rule with no host/path/method would match every
+            # request -- almost certainly a mistake. Kept as a config-boundary
+            # check (not in BreakpointRule.from_dict itself) so the engine's
+            # own bare-rule tests, which construct such rules directly, are
+            # unaffected.
+            if r["enabled"] and not (r["host"] or r["path"] or r["method"]):
+                raise ValueError("a rule needs a host, path, or method")
         cfg = self._read_config()
         cfg["breakpoints"] = {"enabled": bool(data.get("enabled", True)), "rules": rules}
         self._write_config(cfg)

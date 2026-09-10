@@ -35,6 +35,22 @@ class ResumeBody(BaseModel):
     status: int | None = None
     reason: str | None = None
 
+async def _run_ws_loop(sock: WebSocket, broadcaster: Any) -> None:
+    """Drive a registered /ws socket's receive loop, always unregistering it
+    from the broadcaster on the way out -- not just on a clean
+    WebSocketDisconnect. A socket that dies some other way (e.g. a protocol
+    error) must not linger in the broadcaster set: that would keep
+    client_count() > 0 with no live UI, which can make a breakpoint rule
+    pause a request nobody will ever see."""
+    try:
+        while True:
+            await sock.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        broadcaster.unregister(sock)
+
+
 def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | None = None,
              edited_replayer: Callable[[str, dict], bool] | None = None,
              passthrough=None,
@@ -206,11 +222,7 @@ def make_app(store, registry, broadcaster, replayer: Callable[[str], bool] | Non
     async def ws(sock: WebSocket) -> None:
         await sock.accept()
         await broadcaster.register(sock)
-        try:
-            while True:
-                await sock.receive_text()
-        except WebSocketDisconnect:
-            broadcaster.unregister(sock)
+        await _run_ws_loop(sock, broadcaster)
 
     dist = web_dist()
     if dist is not None:

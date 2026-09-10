@@ -117,6 +117,16 @@ class BreakpointEngine:
         e["_flow"].resume()
         return self.public(e)
 
+    def resume_all(self) -> list[dict]:
+        """Resume every currently-paused flow (e.g. before the store that
+        backs their /api/paused entries is cleared out from under them)."""
+        out = []
+        for fid in list(self._paused):
+            e = self.resume(fid)
+            if e:
+                out.append(e)
+        return out
+
     def drop(self, flow_id: str) -> dict | None:
         e = self._paused.pop(flow_id, None)
         if e is None:

@@ -120,6 +120,13 @@ class Proxino:
             self._modified.discard(old_id)
 
     def clear(self) -> None:
+        # Resume anything currently intercepted at a breakpoint *before*
+        # wiping the store -- otherwise the paused flow's /api/paused entry
+        # (which joins against the store) vanishes while mitmproxy keeps
+        # holding it open, and the UI loses any way to Continue/Drop it
+        # until the 60s sweep eventually resumes it.
+        for entry in self.breakpoints.resume_all():
+            self._publish({"type": "breakpoint.resumed", "flow_id": entry["flow_id"], "modified": False})
         self.store.clear()
         self._modified.clear()
 

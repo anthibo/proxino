@@ -106,3 +106,13 @@ def test_breakpoints_config_roundtrip_preserves_keys(tmp_path):
     assert data["passthrough_hosts"] == ["*.a"] and data["labels"] == {"1.1.1.1": "me"}
     assert data["breakpoints"]["rules"][0]["method"] == "" and data["breakpoints"]["enabled"] is False
     with pytest.raises(ValueError): reg.set_breakpoints({"enabled": True, "rules": [{"id": "z", "phase": "x"}]})
+
+def test_set_breakpoints_rejects_enabled_match_all_rule(tmp_path):
+    reg = ClientRegistry(tmp_path / "c.json")
+    # An enabled rule with no host/path/method would pause every request --
+    # almost certainly a mistake -- so it must be rejected at the config
+    # boundary. A *disabled* all-empty rule is still fine to store.
+    with pytest.raises(ValueError):
+        reg.set_breakpoints({"enabled": True, "rules": [{"id": "r1"}]})
+    reg.set_breakpoints({"enabled": True, "rules": [{"id": "r1", "enabled": False}]})
+    assert reg.breakpoints()["rules"][0]["enabled"] is False

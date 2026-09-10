@@ -405,3 +405,26 @@ async def test_sweep_publishes_timeout(monkeypatch):
         await addon._flush_for_test()
     assert not f.intercepted and published[-1]["type"] == "breakpoint.timeout"
     assert addon.store.get(f.id).state == "pending"
+
+async def test_clear_resumes_paused_flows(monkeypatch):
+    # clear() must not orphan a currently-paused flow: it should resume it
+    # (so it's no longer intercepted at mitmproxy's level) and tell any
+    # connected UI via breakpoint.resumed, since the flow's /api/paused
+    # entry is about to vanish along with the cleared store.
+    addon = Proxino()
+    published = []
+    async def fake_publish(evt): published.append(evt)
+    addon.broadcaster.publish = fake_publish
+    await addon.broadcaster.register(_WS())
+    monkeypatch.setattr(addon.registry, "breakpoints", lambda: {"enabled": True, "rules": [{"id": "r"}]})
+    with taddons.context(addon):
+        f = tflow.tflow(); f.client_conn.peername = ("10.0.0.5", 5000)
+        addon.request(f)
+        await addon._flush_for_test()
+        assert f.intercepted and addon.breakpoints.get(f.id) is not None
+        addon.clear()
+        await addon._flush_for_test()
+    assert f.intercepted is False
+    assert addon.breakpoints.paused() == []
+    resumed = [e for e in published if e["type"] == "breakpoint.resumed" and e.get("flow_id") == f.id]
+    assert len(resumed) == 1 and resumed[0]["modified"] is False

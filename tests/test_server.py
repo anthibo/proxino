@@ -1,4 +1,5 @@
 import asyncio
+import pytest
 from fastapi.testclient import TestClient
 from proxino.server import make_app
 from proxino.store import FlowStore
@@ -253,3 +254,22 @@ def test_ws_messages_endpoint(tmp_path):
     assert c.get("/api/flows/w/ws?after=0").json()["messages"][0]["i"] == 1
     assert c.get("/api/flows/nope/ws").status_code == 404
     store.add(make_flow(id="h")); assert c.get("/api/flows/h/ws").json() == {"messages": [], "total": 0}
+
+async def test_ws_loop_unregisters_on_non_disconnect_error():
+    # The /ws route must drop a socket from the broadcaster even when it
+    # dies some way other than WebSocketDisconnect -- otherwise it lingers
+    # in the broadcaster set and client_count() stays > 0 with no live UI,
+    # which can make a breakpoint rule pause a request nobody will ever see.
+    from proxino.server import _run_ws_loop
+
+    class FakeSock:
+        async def receive_text(self):
+            raise RuntimeError("socket died some other way")
+
+    bc = Broadcaster()
+    sock = FakeSock()
+    await bc.register(sock)
+    assert bc.client_count() == 1
+    with pytest.raises(RuntimeError):
+        await _run_ws_loop(sock, bc)
+    assert bc.client_count() == 0
