@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proxino — see what your apps are really sending</title>
+  <meta name="description" content="Proxino is a free, open-source, self-hosted HTTP inspector for mobile and desktop. Decrypt HTTPS, group traffic per client, replay and edit requests, set breakpoints. Desktop apps for macOS, Windows and Linux.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta property="og:title" content="Proxino — see what your apps are really sending">
+  <meta property="og:description" content="A free, self-hosted HTTP inspector. Decrypt HTTPS from any client, replay and edit requests, set breakpoints. Desktop apps for macOS, Windows and Linux.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://anthibo.github.io/proxino/">
+  <meta property="og:image" content="https://anthibo.github.io/proxino/inspector.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; overflow-wrap: anywhere; background: #0E1016; color: #E7EAF0; font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #A99CFF; text-decoration: none; } a:hover { color: #C9C0FF; }
+    .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+    .wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+    .nav-link { color: #9AA3B2; font-size: 14px; font-weight: 500; } .nav-link:hover { color: #E7EAF0; }
+    .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 48px; padding: 0 22px; border-radius: 8px; background: #7C6CF6; color: #FFFFFF; font-weight: 600; font-size: 15px; border: 1px solid #7C6CF6; cursor: pointer; }
+    .btn-primary:hover { background: #8D7FFF; color: #FFFFFF; }
+    .btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 48px; padding: 0 20px; border-radius: 8px; background: #1C2230; color: #E7EAF0; font-weight: 600; font-size: 15px; border: 1px solid #252D3D; }
+    .btn-secondary:hover { border-color: #7C6CF6; color: #FFFFFF; }
+    .card { background: #151922; border: 1px solid #252D3D; border-radius: 12px; }
+    .h1 { font-size: 64px; line-height: 1.04; letter-spacing: -0.035em; font-weight: 800; text-wrap: balance; margin: 0; }
+    .h2 { font-size: 36px; line-height: 1.12; letter-spacing: -0.025em; font-weight: 700; text-wrap: balance; margin: 0; }
+    .lead { font-size: 19px; line-height: 1.55; color: #9AA3B2; text-wrap: pretty; margin: 0; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .hero-glow { position: absolute; left: 50%; top: -120px; width: 900px; height: 520px; transform: translateX(-50%); background: radial-gradient(closest-side, rgba(124,108,246,0.22), rgba(124,108,246,0)); pointer-events: none; }
+    .shot { border-radius: 12px; border: 1px solid #2A3245; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(124,108,246,0.15); background: #151922; }
+    .shot img { display: block; width: 100%; height: auto; }
+    .kbd { display: inline-block; overflow-wrap: anywhere; padding: 2px 7px; border-radius: 5px; background: #1C2230; border: 1px solid #252D3D; color: #E7EAF0; font-size: 13px; }
+    .step-num { width: 32px; height: 32px; border-radius: 999px; background: rgba(124,108,246,0.16); color: #A99CFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+    .dl-cta { align-self: flex-start; height: 42px; font-size: 14px; padding: 0 16px; }
+    .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: #151922; border: 1px solid #252D3D; color: #9AA3B2; font-size: 13px; font-weight: 500; }
+    @media (max-width: 820px) { .h1 { font-size: 52px; } }
+    @media (max-width: 720px) {
+      .wrap { padding: 0 20px; }
+      .h1 { font-size: 38px; }
+      .h2 { font-size: 27px; }
+      .lead { font-size: 17px; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+      .nav-links { display: none !important; }
+      .hero-ctas { flex-direction: column; align-items: stretch !important; }
+      .hero-ctas .btn-primary, .hero-ctas .btn-secondary { width: 100%; }
+      .hero-glow { width: 520px; }
+    }
+  </style>
+</head>
+<body>
+<div style="display: flex; flex-direction: column; width: 100%; min-height: 100%; background: #0E1016; position: relative; overflow: hidden;">
+
+  <!-- Nav -->
+  <div class="wrap" style="display: flex; align-items: center; justify-content: space-between; height: 72px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 30px; height: 30px; border-radius: 8px; background: #20213A; border: 1px solid #2A2B47; display: flex; align-items: flex-end; justify-content: center; gap: 3px; padding-bottom: 7px;">
+        <span style="width: 3px; height: 6px; border-radius: 2px; background: #4B5568;"></span>
+        <span style="width: 3px; height: 10px; border-radius: 2px; background: #4B5568;"></span>
+        <span style="width: 3px; height: 14px; border-radius: 2px; background: #7C6CF6;"></span>
+      </div>
+      <span style="font-weight: 700; font-size: 17px; color: #E7EAF0; letter-spacing: -0.01em;">Proxino</span>
+      <span id="nav-version" class="mono" style="font-size: 11px; color: #7C6CF6; background: rgba(124,108,246,0.14); border: 1px solid rgba(124,108,246,0.35); border-radius: 5px; padding: 2px 6px;">&nbsp;</span>
+    </div>
+    <div class="nav-links" style="display: flex; align-items: center; gap: 28px;">
+      <a class="nav-link" href="#why">Why</a>
+      <a class="nav-link" href="#how">How it works</a>
+      <a class="nav-link" href="#download">Download</a>
+      <a class="nav-link" href="https://github.com/anthibo/proxino" style="display: inline-flex; align-items: center; gap: 8px; color: #E7EAF0;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"></path></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <div style="position: relative; padding: 72px 0 40px;">
+    <div class="hero-glow"></div>
+    <div class="wrap" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 28px; position: relative;">
+      <div class="pill">
+        <span style="width: 7px; height: 7px; border-radius: 999px; background: #34D399;"></span>
+        Free and open source · MIT · Desktop apps for macOS, Windows and Linux
+      </div>
+      <h1 class="h1" style="max-width: 860px;">See what your apps are really sending.</h1>
+      <p class="lead" style="max-width: 640px;">Proxino is a free, self-hosted HTTP inspector. Route any app through it, a phone, an emulator, a browser, a script, and watch every request live: decrypted, grouped per client, ready to replay. No account, no license key, nothing leaves your machine.</p>
+      <div class="hero-ctas" style="display: flex; align-items: center; gap: 12px;">
+        <a id="hero-download" class="btn-primary" href="https://github.com/anthibo/proxino/releases/latest">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M4 19h16"></path></svg>
+          <span id="hero-download-label">Download Proxino</span>
+        </a>
+        <a class="btn-secondary" href="https://github.com/anthibo/proxino">View on GitHub</a>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: #626C7E;">
+        <span style="margin-right: 4px;">Works with</span>
+        <span class="kbd">iOS</span><span class="kbd">Android</span><span class="kbd">Simulators &amp; emulators</span><span class="kbd">Browsers</span><span class="kbd">Scripts &amp; CLIs</span><span class="kbd">Anything with a proxy setting</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screenshot -->
+  <div class="wrap" style="padding-top: 24px; padding-bottom: 72px;">
+    <div class="shot">
+      <div style="display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; background: #151922; border-bottom: 1px solid #252D3D;">
+        <span style="width: 10px; height: 10px; border-radius: 999px; background: #3A4256;"></span>
+        <span style="width: 10px; height: 10px; border-radius: 999px; background: #3A4256;"></span>
+        <span style="width: 10px; height: 10px; border-radius: 999px; background: #3A4256;"></span>
+      </div>
+      <img src="inspector.png" width="2800" height="1760" alt="The Proxino inspector showing captured traffic grouped by client, with a JSON response body open in the detail pane.">
+    </div>
+  </div>
+
+  <!-- Trust strip -->
+  <div style="border-top: 1px solid #1B2130; border-bottom: 1px solid #1B2130; background: #0B0D13;">
+    <div class="wrap grid-4" style="padding-top: 28px; padding-bottom: 28px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-weight: 600; font-size: 15px;">Built on mitmproxy</div>
+        <div style="font-size: 13px; color: #626C7E;">The proven open-source capture engine, not a black box.</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-weight: 600; font-size: 15px;">Runs on your machine</div>
+        <div style="font-size: 13px; color: #626C7E;">The UI binds to localhost. Captured traffic is never uploaded.</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-weight: 600; font-size: 15px;">MIT licensed</div>
+        <div style="font-size: 13px; color: #626C7E;">Read it, fork it, ship it inside your team.</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-weight: 600; font-size: 15px;">Any client</div>
+        <div style="font-size: 13px; color: #626C7E;">Phones, emulators, browsers and scripts show up side by side, each named from its traffic.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Why -->
+  <div id="why" class="wrap" style="display: flex; flex-direction: column; gap: 40px; padding-top: 96px; padding-bottom: 96px;">
+    <div style="display: flex; flex-direction: column; gap: 14px; max-width: 640px;">
+      <h2 class="h2">The questions you actually have when something misbehaves.</h2>
+      <p class="lead" style="font-size: 17px;">Proxino is built around the four things you do in a debugging session: decrypt, find, reproduce, and trust what you are looking at.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card" style="display: flex; flex-direction: column; gap: 14px; padding: 28px;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(52,211,153,0.12); color: #34D399; display: flex; align-items: center; justify-content: center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path><path d="M12 15v2"></path></svg>
+        </div>
+        <div style="font-weight: 700; font-size: 20px; letter-spacing: -0.01em;">Does HTTPS actually decrypt?</div>
+        <p style="font-size: 15px; line-height: 1.6; color: #9AA3B2; margin: 0;">Yes, once the client trusts the certificate. The connect wizard shows the proxy address and a scannable QR code for phones; desktop tools only need the CA installed. Certificate-pinned apps won't decrypt, so Proxino forwards them untouched and lists them, instead of breaking the app.</p>
+      </div>
+      <div class="card" style="display: flex; flex-direction: column; gap: 14px; padding: 28px;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(124,108,246,0.14); color: #A99CFF; display: flex; align-items: center; justify-content: center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        </div>
+        <div style="font-weight: 700; font-size: 20px; letter-spacing: -0.01em;">Can I find the one request that failed?</div>
+        <p style="font-size: 15px; line-height: 1.6; color: #9AA3B2; margin: 0;">Type <span class="kbd mono">status:&gt;=400 host:*.example.com</span> and the table narrows as you type, with autocomplete. Quick chips for GET, POST, 4xx and 5xx, an errors-only toggle, and saved filters for the searches you run every day.</p>
+      </div>
+      <div class="card" style="display: flex; flex-direction: column; gap: 14px; padding: 28px;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(251,191,36,0.12); color: #FBBF24; display: flex; align-items: center; justify-content: center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.7L20 8"></path><path d="M20 3v5h-5"></path><path d="M20 12a8 8 0 0 1-13.7 5.7L4 16"></path><path d="M4 21v-5h5"></path></svg>
+        </div>
+        <div style="font-weight: 700; font-size: 20px; letter-spacing: -0.01em;">Can I reproduce it, or change it in flight?</div>
+        <p style="font-size: 15px; line-height: 1.6; color: #9AA3B2; margin: 0;">Replay any request, or edit its method, URL, headers or body and resend. Set a breakpoint to pause a matching request or response and rewrite it before it continues. Copy as cURL, export HAR, save the session for tomorrow.</p>
+      </div>
+      <div class="card" style="display: flex; flex-direction: column; gap: 14px; padding: 28px;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(96,165,250,0.12); color: #60A5FA; display: flex; align-items: center; justify-content: center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.4 3.4 8.2 8 9 4.6-.8 8-4.6 8-9V6z"></path><path d="m9 12 2 2 4-4"></path></svg>
+        </div>
+        <div style="font-weight: 700; font-size: 20px; letter-spacing: -0.01em;">Where does my traffic go?</div>
+        <p style="font-size: 15px; line-height: 1.6; color: #9AA3B2; margin: 0;">Nowhere. The proxy and the UI run on your computer; the web UI only listens on 127.0.0.1. There is no cloud, no telemetry, and no sign-in. The source is on GitHub if you want to check.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <div id="how" style="background: #0B0D13; border-top: 1px solid #1B2130; border-bottom: 1px solid #1B2130;">
+    <div class="wrap" style="display: flex; flex-direction: column; gap: 40px; padding-top: 88px; padding-bottom: 88px;">
+      <div style="display: flex; flex-direction: column; gap: 12px; max-width: 560px;">
+        <h2 class="h2">Connected in three steps.</h2>
+        <p class="lead" style="font-size: 17px;">The desktop app starts the capture engine for you. The rest happens on the client.</p>
+      </div>
+      <div class="grid-3">
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="step-num">1</div>
+          <div style="font-weight: 600; font-size: 17px;">Point the client at Proxino</div>
+          <p style="font-size: 15px; line-height: 1.6; color: #9AA3B2; margin: 0;">Same network, then set the device, emulator, browser or tool to use Proxino as its HTTP proxy, port 8080 by default. The Connect wizard shows the exact address.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="step-num">2</div>
+          <div style="font-weight: 600; font-size: 17px;">Trust the certificate</div>
+          <p style="font-size: 15px; line-height: 1.6; color: #9AA3B2; margin: 0;">Scan the QR code or open mitm.it through the proxy and install the CA. On iOS, also enable full trust in Certificate Trust Settings.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="step-num">3</div>
+          <div style="font-weight: 600; font-size: 17px;">Watch it live</div>
+          <p style="font-size: 15px; line-height: 1.6; color: #9AA3B2; margin: 0;">Requests appear the moment they start, grouped under the client. Click one for headers, body, and a timing waterfall.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Download -->
+  <div id="download" class="wrap" style="display: flex; flex-direction: column; gap: 36px; padding-top: 96px; padding-bottom: 72px;">
+    <div style="display: flex; flex-direction: column; gap: 12px; max-width: 640px;">
+      <h2 class="h2">Download Proxino<span id="dl-version"></span></h2>
+      <p class="lead" style="font-size: 17px;">One download per platform, capture engine built in. Builds are unsigned for now, so your OS will ask once before the first launch.</p>
+    </div>
+    <div class="grid-3">
+      <div class="card" data-os="mac" style="display: flex; flex-direction: column; gap: 16px; padding: 24px;">
+        <div style="font-weight: 700; font-size: 18px;">macOS</div>
+        <div style="font-size: 14px; color: #9AA3B2;">macOS 12 or later, Apple Silicon.</div>
+        <div class="mono dl-file" style="font-size: 12px; color: #626C7E; margin-top: -4px;">&nbsp;</div>
+        <a class="btn-secondary dl-cta" href="https://github.com/anthibo/proxino/releases/latest" data-cta>Download .dmg</a>
+        <div style="font-size: 12px; color: #626C7E; line-height: 1.5;">First launch: right-click the app and choose Open.</div>
+      </div>
+      <div class="card" data-os="win" style="display: flex; flex-direction: column; gap: 16px; padding: 24px;">
+        <div style="font-weight: 700; font-size: 18px;">Windows</div>
+        <div style="font-size: 14px; color: #9AA3B2;">Windows 10 or 11, 64-bit.</div>
+        <div class="mono dl-file" style="font-size: 12px; color: #626C7E; margin-top: -4px;">&nbsp;</div>
+        <a class="btn-secondary dl-cta" href="https://github.com/anthibo/proxino/releases/latest" data-cta>Download installer</a>
+        <div style="font-size: 12px; color: #626C7E; line-height: 1.5;">SmartScreen: choose More info, then Run anyway.</div>
+      </div>
+      <div class="card" data-os="linux" style="display: flex; flex-direction: column; gap: 16px; padding: 24px;">
+        <div style="font-weight: 700; font-size: 18px;">Linux</div>
+        <div style="font-size: 14px; color: #9AA3B2;">x86_64. AppImage or Debian package.</div>
+        <div class="mono dl-file" style="font-size: 12px; color: #626C7E; margin-top: -4px;">&nbsp;</div>
+        <a class="btn-secondary dl-cta" href="https://github.com/anthibo/proxino/releases/latest" data-cta>Download AppImage</a>
+        <div style="font-size: 12px; color: #626C7E; line-height: 1.5;"><span class="mono">chmod +x</span>, then run it. A <a id="dl-deb" href="https://github.com/anthibo/proxino/releases/latest">.deb is on the release page</a> too.</div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 18px 20px; border-radius: 10px; background: #151922; border: 1px solid #252D3D; font-size: 14px; color: #9AA3B2; flex-wrap: wrap;">
+      <span style="font-weight: 600; color: #E7EAF0;">Prefer a browser?</span>
+      <span>Run it from source and open the same UI at</span>
+      <span class="kbd mono">http://127.0.0.1:8081</span>
+      <a href="https://github.com/anthibo/proxino#from-source" style="margin-left: auto; font-weight: 600;">Instructions on GitHub</a>
+    </div>
+    <div id="dl-checksums" style="font-size: 13px; color: #626C7E;">Verify your download against <a id="dl-checksums-link" href="https://github.com/anthibo/proxino/releases/latest">SHA256SUMS.txt</a> on the release page.</div>
+  </div>
+
+  <!-- Footer -->
+  <div style="border-top: 1px solid #1B2130;">
+    <div class="wrap" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 28px; padding-bottom: 36px; flex-wrap: wrap; font-size: 13px; color: #626C7E;">
+      <div>Proxino is an independent open-source project. Not affiliated with Proxyman or Charles.</div>
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <a href="https://github.com/anthibo/proxino">GitHub</a>
+        <a href="https://github.com/anthibo/proxino/releases">Releases</a>
+        <a href="https://github.com/anthibo/proxino/blob/main/LICENSE">MIT License</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function () {
+    var REPO = "anthibo/proxino";
+    var RELEASES = "https://github.com/" + REPO + "/releases";
+    var LATEST = RELEASES + "/latest";
+
+    // Per-platform: how to recognise the asset, and the button label.
+    var PLATFORMS = {
+      mac:   { match: function (n) { return /\.dmg$/i.test(n); },        cta: "Download for macOS",  hero: "Download for macOS" },
+      win:   { match: function (n) { return /-setup\.exe$/i.test(n); },  cta: "Download for Windows", hero: "Download for Windows" },
+      linux: { match: function (n) { return /\.AppImage$/i.test(n); },   cta: "Download for Linux",  hero: "Download for Linux" }
+    };
+
+    function detectOS() {
+      var ua = navigator.userAgent || "";
+      if (/Windows/i.test(ua)) return "win";
+      if (/Android/i.test(ua)) return "linux";
+      if (/Linux/i.test(ua)) return "linux";
+      if (/Mac|iPhone|iPad|iPod/i.test(ua)) return "mac";
+      return "mac";
+    }
+
+    function assetFor(assets, os) {
+      for (var i = 0; i < assets.length; i++) {
+        if (PLATFORMS[os].match(assets[i].name)) return assets[i];
+      }
+      return null;
+    }
+
+    function apply(release) {
+      var assets = (release && release.assets) || [];
+      var version = release && release.tag_name ? release.tag_name : "";
+      var os = detectOS();
+
+      if (version) {
+        document.getElementById("nav-version").textContent = version;
+        document.getElementById("dl-version").textContent = " " + version;
+      } else {
+        var nv = document.getElementById("nav-version");
+        nv.style.display = "none";
+      }
+
+      // Per-platform download cards.
+      var cards = document.querySelectorAll(".card[data-os]");
+      for (var i = 0; i < cards.length; i++) {
+        var cardOs = cards[i].getAttribute("data-os");
+        var a = assetFor(assets, cardOs);
+        var cta = cards[i].querySelector("[data-cta]");
+        var file = cards[i].querySelector(".dl-file");
+        if (a) {
+          cta.setAttribute("href", a.browser_download_url);
+          file.textContent = a.name;
+        } else {
+          cta.setAttribute("href", LATEST);
+          file.textContent = "";
+        }
+        // Highlight the visitor's platform.
+        if (cardOs === os) {
+          cta.classList.remove("btn-secondary");
+          cta.classList.add("btn-primary");
+        }
+      }
+
+      // Linux .deb link.
+      var deb = null;
+      for (var j = 0; j < assets.length; j++) { if (/\.deb$/i.test(assets[j].name)) { deb = assets[j]; break; } }
+      if (deb) document.getElementById("dl-deb").setAttribute("href", deb.browser_download_url);
+
+      // Checksums link → the SHA256SUMS.txt asset.
+      var sums = null;
+      for (var k = 0; k < assets.length; k++) { if (/^SHA256SUMS/i.test(assets[k].name)) { sums = assets[k]; break; } }
+      if (sums) document.getElementById("dl-checksums-link").setAttribute("href", sums.browser_download_url);
+
+      // Hero button → detected platform's asset, else the releases page.
+      var heroA = assetFor(assets, os);
+      var hero = document.getElementById("hero-download");
+      var heroLabel = document.getElementById("hero-download-label");
+      if (heroA) {
+        hero.setAttribute("href", heroA.browser_download_url);
+        heroLabel.textContent = PLATFORMS[os].hero;
+      }
+    }
+
+    // Fetch the latest release; on any failure the static hrefs (the releases
+    // page) already work, so we only enhance on success.
+    try {
+      fetch("https://api.github.com/repos/" + REPO + "/releases/latest", {
+        headers: { "Accept": "application/vnd.github+json" }
+      }).then(function (r) {
+        return r.ok ? r.json() : null;
+      }).then(function (release) {
+        if (release) apply(release);
+        else document.getElementById("nav-version").style.display = "none";
+      }).catch(function () {
+        document.getElementById("nav-version").style.display = "none";
+      });
+    } catch (e) {
+      document.getElementById("nav-version").style.display = "none";
+    }
+  })();
+</script>
+</body>
+</html>
