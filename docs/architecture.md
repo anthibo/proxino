@@ -121,6 +121,8 @@ The app opens `wss://gateway.example.com/socket`.
 
 ### 3. A pinned host (passthrough)
 
+<p align="center"><img src="media/passthrough.gif" alt="Two refused handshakes, then the host is forwarded encrypted." width="640"></p>
+
 Instagram refuses the proxy's certificate.
 
 1. `tls_failed_client` fires. `PassthroughRegistry.record_failure("i.instagram.com", …)` counts it and publishes the current set with the host `"active": false` — it is **watching**, still intercepted while the count builds:
@@ -133,6 +135,8 @@ Instagram refuses the proxy's certificate.
 2. On the second failure within a minute the host flips to `"active": true`. From then on `tls_clienthello` sets `ignore_connection`, so mitmproxy forwards that host encrypted and untouched — the app works, **no HTTP flow is produced for it**, and it's listed under Passthrough. `DELETE /api/passthrough/i.instagram.com` retries decryption; a config‑listed host is active from the first hello and skips the two failures.
 
 ### 4. A breakpoint (pause → edit → continue)
+
+<p align="center"><img src="media/breakpoint.gif" alt="A matching request pauses, a header is added, and it continues." width="640"></p>
 
 A rule is armed: host `endpoint.soum.sa`, phase `request`.
 

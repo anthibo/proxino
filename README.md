@@ -72,7 +72,7 @@ The commercial inspectors are excellent tools, and if you need map-local or scri
 
 ## How it works
 
-<p align="center"><img src="https://raw.githubusercontent.com/anthibo/proxino/main/docs/media/architecture.svg" alt="A client sends HTTPS through mitmproxy on port 8080, which decrypts and hands flows to the Proxino addon; the addon (flow store, devices, passthrough, breakpoints, WebSocket frames) is backed by ~/.proxino/config.json and serves a FastAPI app on 8081 that the React web UI loads over REST and WebSocket." width="820"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/anthibo/proxino/main/docs/media/architecture.gif" alt="Animated: a request pulses from a client through mitmproxy (which decrypts on port 8080) into the Proxino addon, then FastAPI on 8081, and the response streams back to the React web UI." width="860"></p>
 
 - **`proxino/`** — the mitmproxy addon (`addon.py`), flow model + store, client/device registry, the FastAPI server (`server.py`), and helpers: TLS passthrough for pinned hosts (`passthrough.py`), breakpoints (`breakpoints.py`), WebSocket frames (`wsstore.py`), body decoders (`decode.py`), HAR, sessions, CA info, transform.
 - **`web/`** — the Vite + React + TypeScript UI (Zustand store, filter DSL, JSON viewer, etc.).
@@ -83,6 +83,8 @@ See [`docs/architecture.md`](https://github.com/anthibo/proxino/blob/main/docs/a
 
 ## Connecting a device
 
+<p align="center"><img src="https://raw.githubusercontent.com/anthibo/proxino/main/docs/media/connect.gif" alt="Animated: set the phone's HTTP proxy, trust the CA, and live requests start flowing to Proxino." width="720"></p>
+
 1. Put the phone on the **same Wi‑Fi** as this machine.
 2. Set a **manual HTTP proxy** to this machine's LAN IP, port **8080**
    (the Connect‑device wizard in the UI shows the exact address).
@@ -92,7 +94,9 @@ See [`docs/architecture.md`](https://github.com/anthibo/proxino/blob/main/docs/a
    - Open **http://mitm.it** on the device (through the proxy) and install the cert.
    - **iOS also needs:** Settings → General → About → **Certificate Trust Settings** → enable full trust. *(This step is easy to miss and is the usual cause of "no requests show up".)*
 
-Some apps pin certificates (Instagram, Facebook, the iOS App Store/iCloud) and will refuse the proxy's cert every time — without this, they'd simply stop working while the phone is proxied. After two refusals Proxino passes that host through encrypted so the app keeps working, and lists it under **Passthrough** in the sidebar. You can retry decryption for a host from there once it stops pinning, or pre‑list known hosts under `"passthrough_hosts"` in `~/.proxino/config.json` to skip the two failed attempts.
+Some apps pin certificates (Instagram, Facebook, the iOS App Store/iCloud) and will refuse the proxy's cert every time — without this, they'd simply stop working while the phone is proxied. After two refusals Proxino passes that host through encrypted so the app keeps working, and lists it under **Passthrough** in the sidebar.
+
+<p align="center"><img src="https://raw.githubusercontent.com/anthibo/proxino/main/docs/media/passthrough.gif" alt="Animated: two refused handshakes at mitmproxy, then the pinned host is forwarded encrypted straight through." width="720"></p> You can retry decryption for a host from there once it stops pinning, or pre‑list known hosts under `"passthrough_hosts"` in `~/.proxino/config.json` to skip the two failed attempts.
 
 ---
 
@@ -109,6 +113,8 @@ Turn the system proxy back **off** when Proxino isn't running, or the machine lo
 ---
 
 ## Breakpoints
+
+<p align="center"><img src="https://raw.githubusercontent.com/anthibo/proxino/main/docs/media/breakpoint.gif" alt="Animated: a matching request pauses at Proxino, a header is added, and it continues to the server." width="720"></p>
 
 Open **Breakpoints** in the top bar to add a rule matching a host, path, method, and phase (request or response). When a request or response matches, it pauses in a **Paused** group at the top of the table — select it to open the inline editor and modify headers, body, or status. Press ⌘↵ to **Continue** or ⌘⌫ to **Drop** the paused flow; if no action is taken within 60 s, it auto-continues. Nothing pauses while no UI client is connected.
 
