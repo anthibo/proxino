@@ -1,6 +1,8 @@
 # Proxino
 
-**A free, open-source network inspector for your phone.** Point an iOS or Android device at Proxino and watch its HTTPS traffic live — requests, responses, timings, grouped per device — with filters, a JSON/HTML viewer, replay, and edit-and-resend. A self-hosted alternative to Proxyman and Charles: no account, no license, runs entirely on your machine.
+**A free, open-source HTTP inspector for your apps.** Point a phone, emulator, browser, script, or your own machine at Proxino and watch its HTTPS traffic live — requests, responses, timings, grouped per client — with filters, a JSON/HTML viewer, replay, edit-and-resend, and breakpoints. A self-hosted alternative to Proxyman and Charles: no account, no license, runs entirely on your machine.
+
+**Landing page:** [anthibo.github.io/proxino](https://anthibo.github.io/proxino/)
 
 <p align="center"><img src="https://raw.githubusercontent.com/anthibo/proxino/main/docs/media/hero.png" alt="Proxino inspector showing captured iPhone traffic with a JSON response open" width="900"></p>
 
@@ -26,7 +28,7 @@ The app bundles the capture engine — no Python or Node needed. It uses port 80
 
 ### Web UI via pip (coming soon)
 
-The PyPI package isn't published yet — it will be `pipx install proxino` once v0.1.0 lands there. Until then, use the desktop app above or run from source below.
+The PyPI package isn't published yet — it will be `pipx install proxino` once a release lands there. Until then, use the desktop app above or run from source below.
 
 ### From source
 
@@ -43,13 +45,13 @@ cd web && npm install && npm run build && cd ..
 
 ## Why Proxino instead of Proxyman / Charles?
 
-The commercial inspectors are excellent tools, and if you need breakpoints, map-local, or scripting today they still do more. Proxino is for the case where you want something **free, open, and self-hosted** that treats your phone as a first-class client:
+The commercial inspectors are excellent tools, and if you need map-local or scripting today they still do more. Proxino is for the case where you want something **free, open, and self-hosted** that treats every client as first-class:
 
 - **Free and MIT-licensed** — no account, no license key, no trial timer.
 - **Open source** — a mitmproxy addon, a FastAPI backend, and a React UI you can read and change.
 - **Runs where you work** — native desktop app for macOS (Apple Silicon), Windows, and Linux, or the same UI in any browser when run from source (PyPI package coming soon).
-- **Phone-first** — devices are auto-named from their traffic, grouped in the sidebar, and get their own connect wizard with a scannable CA QR code.
-- **Not there yet** — no breakpoints/intercept, no map-local, no scripting. See the [roadmap](#roadmap).
+- **Any client** — phones, emulators, browsers, scripts, and your own machine are auto-named from their traffic and grouped in the sidebar; phones get a connect wizard with a scannable CA QR code.
+- **Intercept built in** — pause, edit, and resend requests or responses with breakpoints. Still missing map-local and scripting. See the [roadmap](#roadmap).
 
 ---
 
@@ -85,7 +87,7 @@ The commercial inspectors are excellent tools, and if you need breakpoints, map-
                                      └─────────────────┘
 ```
 
-- **`proxino/`** — the mitmproxy addon (`addon.py`), flow model + store, client/device registry, the FastAPI server (`server.py`), and helpers (HAR, sessions, CA info, transform).
+- **`proxino/`** — the mitmproxy addon (`addon.py`), flow model + store, client/device registry, the FastAPI server (`server.py`), and helpers: TLS passthrough for pinned hosts (`passthrough.py`), breakpoints (`breakpoints.py`), WebSocket frames (`wsstore.py`), body decoders (`decode.py`), HAR, sessions, CA info, transform.
 - **`web/`** — the Vite + React + TypeScript UI (Zustand store, filter DSL, JSON viewer, etc.).
 
 See [`docs/architecture.md`](https://github.com/anthibo/proxino/blob/main/docs/architecture.md) for a deeper tour.
@@ -104,6 +106,18 @@ See [`docs/architecture.md`](https://github.com/anthibo/proxino/blob/main/docs/a
    - **iOS also needs:** Settings → General → About → **Certificate Trust Settings** → enable full trust. *(This step is easy to miss and is the usual cause of "no requests show up".)*
 
 Some apps pin certificates (Instagram, Facebook, the iOS App Store/iCloud) and will refuse the proxy's cert every time — without this, they'd simply stop working while the phone is proxied. After two refusals Proxino passes that host through encrypted so the app keeps working, and lists it under **Passthrough** in the sidebar. You can retry decryption for a host from there once it stops pinning, or pre‑list known hosts under `"passthrough_hosts"` in `~/.proxino/config.json` to skip the two failed attempts.
+
+---
+
+## Inspecting this computer
+
+Proxino also captures traffic from the machine it runs on — a browser, a script, a CLI. The proxy is at `127.0.0.1:8080`, so point the system proxy at **loopback**, not the LAN IP.
+
+- **macOS:** System Settings → Network → your service → Details → Proxies → enable **Web Proxy** and **Secure Web Proxy**, both `127.0.0.1` port `8080`. Trust the CA once: double‑click `~/.mitmproxy/mitmproxy-ca-cert.pem` in Keychain Access and set it to **Always Trust**.
+- **Windows:** Settings → Network → Proxy → Manual, `127.0.0.1:8080`. Import the CA into **Trusted Root Certification Authorities**.
+- **Linux / a single tool:** set `HTTP_PROXY`/`HTTPS_PROXY` to `http://127.0.0.1:8080` for that process, and point it at the CA (many tools honour `SSL_CERT_FILE` / `REQUESTS_CA_BUNDLE`).
+
+Turn the system proxy back **off** when Proxino isn't running, or the machine loses internet. Apple's own system services and cert‑pinned desktop apps won't decrypt — passthrough handles those the same way it does on a phone.
 
 ---
 
@@ -157,9 +171,10 @@ docs/           documentation
 
 ## Roadmap
 
+- Map-local / mock responses, client-side scripting hooks
 - Find-in-body search, copy-all-as-cURL
+- PyPI package (`pipx install proxino`)
 - Signed and notarized desktop builds, Intel macOS build, Homebrew tap
-- Client-side scripting hooks
 
 Ideas and PRs welcome — see [CONTRIBUTING.md](https://github.com/anthibo/proxino/blob/main/CONTRIBUTING.md).
 
