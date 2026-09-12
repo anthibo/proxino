@@ -2,6 +2,10 @@
 
 Proxino has three layers: a **mitmproxy addon** that captures traffic, a **FastAPI backend** that exposes it, and a **React web UI** that renders it. All three run in one process on `127.0.0.1`; a desktop shell (`desktop/`, Tauri) bundles that process as a native app.
 
+<p align="center"><img src="media/architecture.svg" alt="Client → mitmproxy (:8080) → Proxino addon → FastAPI (:8081) → React web UI, with the addon reading ~/.proxino/config.json." width="820"></p>
+
+> The diagram is editable: open [`architecture.excalidraw`](architecture.excalidraw) in [Excalidraw](https://excalidraw.com) and re‑export `media/architecture.svg`.
+
 ## 1. Capture — the mitmproxy addon (`proxino/addon.py`)
 
 Proxino runs as a standard mitmproxy addon loaded by `mitmdump`. mitmproxy terminates TLS with its own CA and re‑encrypts to the origin, so decrypted flows are available to the addon's hooks.
@@ -72,3 +76,73 @@ A `Flow` carries request/response metadata, a `ClientRef` (ip, label, kind), `se
 ## Desktop shell (`desktop/`)
 
 A Tauri 2 app bundles the Python backend as a PyInstaller sidecar. On launch it picks free ports (proxy prefers 8080, UI 8081), spawns the sidecar, waits for the UI port, and loads it in a native window, killing the sidecar on exit. Releases are built for macOS, Windows, and Linux by the tag‑triggered `.github/workflows/release.yml`.
+
+## Data & event flow — worked examples
+
+Each example follows one request through the hooks, the store, and the `/ws` event stream. Records are the `Flow.meta()` projection the list view and events carry; the full detail (with bodies) comes from `GET /api/flows/{id}`.
+
+### 1. A decrypted GET
+
+A phone requests `https://api.soum.sa/v2/listings`.
+
+1. `request` hook fires. The addon builds a pending record and publishes it, so the row appears before the response lands:
+
+   ```json
+   { "type": "flow.new", "flow": {
+       "id": "a1b2", "method": "GET", "scheme": "https", "host": "api.soum.sa",
+       "path": "/v2/listings", "client": { "ip": "192.168.1.29", "label": "Anthibo iPhone", "kind": "phone" },
+       "kind": "http", "state": "pending", "response": null } }
+   ```
+
+2. `response` hook fires. The record is completed (status, sizes, per‑phase timing, decoded `body_view` if any) and re‑published:
+
+   ```json
+   { "type": "flow.complete", "flow": {
+       "id": "a1b2", "response": { "status": 200, "content_type": "application/json", "size": 3120, "body_view": null },
+       "state": "complete", "duration_ms": 142 } }
+   ```
+
+3. The UI upserts the row on each event (same `id`, no reordering). Clicking it calls `GET /api/flows/a1b2` for headers and the body; a Protobuf/gRPC/MsgPack body arrives pre‑rendered as `body_pretty` with a `body_view` badge.
+
+### 2. A WebSocket connection
+
+The app opens `wss://gateway.example.com/socket`.
+
+1. The HTTP `101` upgrade is captured like any flow. `websocket_start` marks it `kind: "ws"` and publishes a `flow.update`; the row shows a live `ws` badge instead of a status.
+2. Each frame triggers `websocket_message`. The frame is appended to the per‑connection `WsStore` (capped 500) with a preview and streamed:
+
+   ```json
+   { "type": "ws.message", "flow_id": "c3d4",
+     "message": { "i": 0, "dir": "out", "type": "text", "size": 48, "view": "json",
+                  "text": "{\"op\":\"subscribe\",\"topic\":\"orders\"}", "pretty": "{\n  \"op\": \"subscribe\", …" } }
+   ```
+
+   A throttled `flow.update` (≤ 4/s) keeps the row's frame count fresh. `websocket_end` publishes a final `flow.update` with the close code. The Messages tab loads history from `GET /api/flows/c3d4/ws?after=N` and appends live frames, merging by index so nothing is lost across a reconnect.
+
+### 3. A pinned host (passthrough)
+
+Instagram refuses the proxy's certificate.
+
+1. `tls_failed_client` fires. `PassthroughRegistry.record_failure("i.instagram.com", …)` counts it and publishes the current set with the host `"active": false` — it is **watching**, still intercepted while the count builds:
+
+   ```json
+   { "type": "passthrough.update", "hosts": [
+       { "host": "i.instagram.com", "source": "auto", "active": false, "failures": 1, "clients": ["192.168.1.29"] } ] }
+   ```
+
+2. On the second failure within a minute the host flips to `"active": true`. From then on `tls_clienthello` sets `ignore_connection`, so mitmproxy forwards that host encrypted and untouched — the app works, **no HTTP flow is produced for it**, and it's listed under Passthrough. `DELETE /api/passthrough/i.instagram.com` retries decryption; a config‑listed host is active from the first hello and skips the two failures.
+
+### 4. A breakpoint (pause → edit → continue)
+
+A rule is armed: host `endpoint.soum.sa`, phase `request`.
+
+1. A matching `request` pauses **only if a UI client is connected**. `BreakpointEngine.pause` calls `flow.intercept()` (mitmproxy holds the request), the record goes to `state: "paused_request"`, and two events fire:
+
+   ```json
+   { "type": "flow.update", "flow": { "id": "e5f6", "state": "paused_request" } }
+   { "type": "breakpoint.paused", "entry": { "flow_id": "e5f6", "phase": "request",
+       "rule_id": "r1", "since": 1757000000, "deadline": 1757000060 }, "flow": { "…full detail…" } }
+   ```
+
+2. The row jumps to a **Paused** group; the inline editor loads the detail. `POST /api/paused/e5f6/resume` with `{ "headers": [["x-debug","1"], …] }` runs on the event loop: `apply_request_edits` rewrites the retained mitmproxy flow, `flow.resume()` lets it continue to the origin, and the record is marked `modified: true`. The normal `response` hook then completes it as usual. `breakpoint.resumed` (or `breakpoint.dropped` for `POST …/drop`) clears it from the UI.
+3. If no one acts within 60 s, the 1 s sweep auto‑continues it unchanged and publishes `breakpoint.timeout`. Clearing the store (`DELETE /api/flows`) also resumes anything paused, so a rule can never strand the device.

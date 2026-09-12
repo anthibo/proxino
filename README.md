@@ -72,20 +72,7 @@ The commercial inspectors are excellent tools, and if you need map-local or scri
 
 ## How it works
 
-```
-        ┌────────────┐        ┌──────────────────────────────┐
- phone  │  mitmproxy  │  flows │  Proxino addon                │
- ───────▶  (:8080)     ├────────▶  • in‑memory flow store       │
- HTTPS  │  TLS decrypt │        │  • ClientRegistry (devices)   │
-        └────────────┘        │  • FastAPI app  (:8081)        │
-                              │      REST + WebSocket           │
-                              │      serves web/dist            │
-                              └───────────────┬───────────────┘
-                                              │ HTTP/WS
-                                     ┌────────▼────────┐
-                                     │  React web UI    │  http://127.0.0.1:8081
-                                     └─────────────────┘
-```
+<p align="center"><img src="https://raw.githubusercontent.com/anthibo/proxino/main/docs/media/architecture.svg" alt="A client sends HTTPS through mitmproxy on port 8080, which decrypts and hands flows to the Proxino addon; the addon (flow store, devices, passthrough, breakpoints, WebSocket frames) is backed by ~/.proxino/config.json and serves a FastAPI app on 8081 that the React web UI loads over REST and WebSocket." width="820"></p>
 
 - **`proxino/`** — the mitmproxy addon (`addon.py`), flow model + store, client/device registry, the FastAPI server (`server.py`), and helpers: TLS passthrough for pinned hosts (`passthrough.py`), breakpoints (`breakpoints.py`), WebSocket frames (`wsstore.py`), body decoders (`decode.py`), HAR, sessions, CA info, transform.
 - **`web/`** — the Vite + React + TypeScript UI (Zustand store, filter DSL, JSON viewer, etc.).
